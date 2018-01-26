@@ -48,15 +48,10 @@ exit_if_not_installed nix-env;
 nix-channel --update
 
 echo "Ensuring dependencies are installed...";
-#ensure_installed jq "nix-env -i jq";
-#ensure_installed jq "nix-env -f $HOME/.nix-defexpr/channels/nixos-17.09 -i jq";
-ensure_installed jq "nix-env -f <nixos-17.09> -i jq";
+ensure_installed jq "nix-env -f <nixos> -i jq";
 
-#ensure_installed node "nix-env -i nodejs";
-#ensure_installed node "nix-env -f $HOME/.nix-defexpr/channels/nixpkgs -i nodejs";
-ensure_installed node "nix-env -f <nixos-17.09> -i nodejs";
+ensure_installed node "nix-env -f <nixos> -i nodejs";
 
-#ensure_installed node2nix "nix-env -f $HOME/.nix-defexpr/channels/nixpkgs -iA nodePackages.node2nix";
 ensure_installed node2nix "nix-env -f <nixpkgs> -iA nodePackages.node2nix";
 
 cd $(script_dir);
