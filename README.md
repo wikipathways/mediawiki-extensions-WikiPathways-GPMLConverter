@@ -1,31 +1,29 @@
 # GPMLConverter
 
-## Install
+## How to Install
 
-### Nix (multi-user)
+1. Clone Repo
+
+```sh
+git clone https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
+cd GPMLConverter
+```
+
+2. Install Nix (multi-user)
 Install [Nix](https://nixos.org/nix/). If running a Debian system like Ubuntu, you can install with [this script](https://github.com/ariutta/nix-install-deb-multi-user).
 
-### Use Nix to install GPMLConverter Dependencies
+3. Install GPMLConverter Dependencies
 
-To install automatically, run the `install` script:
+Run the `install-dependencies` script:
 ```sh
-cd /var/www/dev.wikipathways.org/wpi/extensions/GPMLConverter
-sudo -i $(pwd)/install
+sudo -i $(pwd)/install-dependencies
 ```
 
-If Nix permissions get messed up, this command will restore them:
-```sh
-sudo chmod -R o+rx /nix/store/
-```
+## How to Update
+If you ever need to update the GPMLConverter dependencies, update `node-packages.json`. Then run the `install-dependencies` script again, just like above.
 
-Executables will be located here:
-> /nix/var/nix/profiles/default/bin/gpml2pvjson
->
-> /nix/var/nix/profiles/default/bin/pvjs
->
-> /nix/var/nix/profiles/default/bin/bridgedb
-
-## Use: convert some data
+## How to Use
+Try converting some data:
 
 ```sh
 curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=json" | \
