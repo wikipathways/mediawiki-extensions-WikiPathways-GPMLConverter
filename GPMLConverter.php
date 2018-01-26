@@ -1,6 +1,7 @@
 <?php
-# TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
+namespace WikiPathways;
 
+# TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
 function write_to_stream($pipes, $proc) {
 	return function($data, $end) use($pipes, $proc) {
 		$stdin = $pipes[0];

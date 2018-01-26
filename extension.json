@@ -1,5 +1,20 @@
 {
+	"name": "GPMLConverter",
+	"version": "0.01",
+	"author": [
+		"[https://wikipathways.org WikiPathways team]"
+	],
+	"url": "https://www.wikipathways.org",
+	"descriptionmsg": "wp-gpml-desc",
+	"license-name": "Apache-2.0",
+	"type": "other",
 	"config": {
-		"Gpml2Pvjson": "/nix/store/ajvvpfjdndqkjxfa1zai9zg0rsf8z5x0-node-gpml2pvjson-3.0.0-5/bin/gpml2pvjson"
+		"gpml2pvjson": "/nix/store/ajvvpfjdndqkjxfa1zai9zg0rsf8z5x0-node-gpml2pvjson-3.0.0-5/bin/gpml2pvjson"
+	},
+	"requires": {
+		"MediaWiki": ">= 1.27.0"
+	},
+	"AutoloadClasses": {
+		"WikiPathways\\GPMLConverter": "GPMLConverter.php"
 	}
 }
