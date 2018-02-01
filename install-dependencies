@@ -70,4 +70,16 @@ if ! cat $APACHE_ENV_VARS_PATH | grep $NIX_BIN_PATH_GLOBAL; then
 	echo "PATH=\$PATH:$NIX_BIN_PATH_GLOBAL" >> $APACHE_ENV_VARS_PATH;
 fi
 
+echo "Creating symlink to browser version of pvjs.js";
+executable_pvjs_symlink=`which pvjs`;
+executable_pvjs=`readlink $executable_pvjs_symlink`;
+executable_pvjs_dir="`dirname $executable_pvjs`/..";
+browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
+browser_pvjs_symlink="./pvjs.js";
+rm -f "$browser_pvjs_symlink";
+ln -s "$browser_pvjs" "$browser_pvjs_symlink";
+
+echo "Symlink created:";
+echo `ls -l $browser_pvjs_symlink`;
+
 echo "Success! GPMLConverter installed/updated."
