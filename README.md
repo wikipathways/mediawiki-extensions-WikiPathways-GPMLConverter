@@ -5,9 +5,12 @@
 1. Clone Repo
 
 ```sh
-git clone https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
+git submodule add https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
 cd GPMLConverter
 ```
+
+Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
+> git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git
 
 2. Install Nix (multi-user)
 Install [Nix](https://nixos.org/nix/). If running a Debian system like Ubuntu, you can install with [this script](https://github.com/ariutta/nix-install-deb-multi-user).
