@@ -146,6 +146,11 @@ TEXT;
 			return $rawPvjsonString;
 		}
 
+		// TODO use jq to stream result and only extract what we need
+		if (strlen($bridgedbResultString) > 5 * 1000 * 1000) {
+			return $rawPvjsonString;
+		}
+
 		try{
 			$bridgedbResult = json_decode($bridgedbResultString);
 			$pvjson = json_decode($rawPvjsonString);
