@@ -150,7 +150,7 @@ TEXT;
 
 
 		// TODO Are we actually saving any time by doing this instead of just parsing it as JSON?
-		if (!$bridgedbResultString || empty($bridgedbResultString) || $bridgedbResultString == '{}' || $bridgedbResultString == '[]') {
+		if (empty($bridgedbResultString) || $bridgedbResultString == '{}' || $bridgedbResultString == '[]') {
 			return $rawPvjsonString;
 		}
 

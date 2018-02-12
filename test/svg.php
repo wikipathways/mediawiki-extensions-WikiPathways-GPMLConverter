@@ -5,7 +5,7 @@ ini_set('display_errors',1);
 error_reporting(-1);
 //*/
 
-require_once("GPMLConverter.php");
+require_once("../src/GPMLConverter.php");
 use WikiPathways\GPMLConverter;
 
 $identifier = isset($_GET["identifier"]) ? $_GET["identifier"] : "WP4";
