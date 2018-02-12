@@ -56,6 +56,8 @@ ensure_installed node2nix "nix-env -f <nixpkgs> -iA nodePackages.node2nix";
 
 cd $(script_dir);
 
+nix-collect-garbage -d;
+
 rm -f default.nix node-packages.nix node-env.nix;
 echo "Installing Nodejs dependencies...";
 node2nix --flatten -6 -i node-packages.json

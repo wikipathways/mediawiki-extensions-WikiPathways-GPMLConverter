@@ -2,7 +2,7 @@
 namespace WikiPathways;
 
 function write_to_stream($pipes, $proc) {
-	wfDebug("write_to_stream(" . json_encode($pipes) . ", " . json_encode($proc) . ") called\n");
+	#wfDebug("write_to_stream(" . json_encode($pipes) . ", " . json_encode($proc) . ") called\n");
 	return function($data, $end) use($pipes, $proc) {
 		try{
 			$stdin = $pipes[0];
@@ -33,9 +33,11 @@ function write_to_stream($pipes, $proc) {
 			proc_close($proc);
 
 			if ($err) {
+				/*
 				wfDebug("Error in write_to_stream():\n");
 				wfDebug($err);
 				wfDebug("\n");
+				//*/
 				trigger_error($err, E_USER_NOTICE);
 			}
 
@@ -51,7 +53,7 @@ function write_to_stream($pipes, $proc) {
 };
 
 function create_stream($cmd, $opts = array()) {
-	wfDebug("create_stream($cmd, " . json_encode($opts) . ") called\n");
+	#wfDebug("create_stream($cmd, " . json_encode($opts) . ") called\n");
 	$timeout = $opts["timeout"];
 
 	$proc = proc_open("cat - | $cmd",
@@ -74,7 +76,7 @@ function create_stream($cmd, $opts = array()) {
 
 		return write_to_stream($pipes, $proc);
 	} else {
-		wfDebug("Error: $proc for $cmd must be a resource.");
+		#wfDebug("Error: $proc for $cmd must be a resource.");
 		return false;
 	}
 }
@@ -86,6 +88,12 @@ class GPMLConverter{
 	public static $bridgedb_path="/nix/var/nix/profiles/default/bin/bridgedb";
 	public static $jq_path="/nix/var/nix/profiles/default/bin/jq";
 	public static $pvjs_path="/nix/var/nix/profiles/default/bin/pvjs";
+
+	private static $SVG_THEMES = array(
+		"plain" => "plain",
+		"dark" => "dark",
+		"pretty" => "dark",
+	);
 
 	function __construct() {
 		// do something
@@ -196,10 +204,11 @@ TEXT;
 			return;
 		}
 
-		$static = isset($opts["static"]) ? $opts["static"] : false;
+		$reactOpt = (isset($opts["react"]) && $opts["react"] == true) ? " --react" : "";
+		$themeOpt = (isset($opts["theme"]) && self::$SVG_THEMES[$opts["theme"]]) ? "--theme " . escapeshellarg(self::$SVG_THEMES[$opts["theme"]]) : "";
 
 		try{
-			$streamPvjsonToSvg = create_stream("$pvjs_path json2svg -s $static", array("timeout" => 10));
+			$streamPvjsonToSvg = create_stream("$pvjs_path $reactOpt $themeOpt", array("timeout" => 10));
 			return $streamPvjsonToSvg($pvjson, true);
 		} catch(Exception $e) {
 			wfDebug("Error converting PVJSON to SVG:");
