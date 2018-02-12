@@ -4,9 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_startup_errors',1);
 ini_set('display_errors',1);
 //*/
-require_once("../src/GPMLConverter.php");
-use WikiPathways\GPMLConverter;
-
+require_once "GPMLConverter.php";
 header("Access-Control-Allow-Origin: *");
 $identifier = isset($_GET["identifier"]) ? $_GET["identifier"] : "WP4";
 $version = isset($_GET["version"]) ? $_GET["version"] : "0";
