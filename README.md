@@ -5,38 +5,44 @@
 1. Clone Repo
 
 ```sh
-git submodule add https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
-cd GPMLConverter
+$ git submodule add https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
+$ cd GPMLConverter
 ```
 
 Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
 > git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git
 
-2. Install Nix (multi-user)
-Install [Nix](https://nixos.org/nix/). If running a Debian system like Ubuntu, you can install with [this script](https://github.com/ariutta/nix-install-deb-multi-user).
+2. Install GPMLConverter Dependencies
 
-3. Install GPMLConverter Dependencies
-
-Run the `install-dependencies` script:
+[Get composer](https://getcomposer.org/) and use it to [install the dependencies](https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies):
 ```sh
-sudo -i $(pwd)/install-dependencies
+$ php composer.phar install
 ```
 
 ## How to Update
-If you ever need to update the GPMLConverter dependencies, update `node-packages.json`. Then run the `install-dependencies` script again, just like above.
+If you ever need to update the GPMLConverter dependencies, update `package.json` or `composer.json` and then run [composer update](https://getcomposer.org/doc/01-basic-usage.md#updating-dependencies-to-their-latest-versions):
+``` sh
+$ php composer.phar update
+```
 
 ## How to Use
-Try converting some data:
+Try converting some data.
 
+The bare metal version
 ```sh
-curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=json" | \
-jq -r .data | base64 --decode | \
-gpml2pvjson --id "http://identifiers.org/wikipathways/WP554" --pathway-version "77712"
+$ curl "http://vm1.wikipathways.org/Pathway:WP554?action=raw&oldid=77712" | \
+    ./node_modules/.bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 \
+    --pathway-version 77712 > WP554.json
+```
 
-curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | gpml2pvjson --id "http://identifiers.org/wikipathways/WP554" --pathway-version "77712"
+Using the included PHP scripts when this is installed as a MediaWiki extension:
+``` sh
+$ php maintenance/convertPathway.php -o json -r 77712 WP554
+The JSON for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) is stored at WP554.json
+```
 
-curl "https://cdn.rawgit.com/wikipathways/pvjs/e47ff1f6/test/input-data/troublesome-pathways/WP1818_73650.gpml" | gpml2pvjson --id "http://identifiers.org/wikipathways/WP1818" --pathway-version "73650" > "WP1818_73650.json"
-
-bridgedb xrefs "Human" "Ensembl" "ENSG00000111186"
-pvjs json2svg "WP1818_73650.json"
+or another format:
+``` sh
+$ php maintenance/convertPathway.php -o SVG -r 77712 WP554
+An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored at WP554.svg
 ```
