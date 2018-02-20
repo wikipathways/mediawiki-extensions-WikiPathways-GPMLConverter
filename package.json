@@ -5,7 +5,7 @@
 	"repository": "https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git",
 	"dependencies": {
 		"bridgedb": "6.0.0-18",
-		"gpml2pvjson": "3.0.0-8",
-		"@wikipathways/pvjs": "4.0.0-30"
+		"gpml2pvjson": "3.0.1",
+		"@wikipathways/pvjs": "4.0.0-32"
 	}
 }
