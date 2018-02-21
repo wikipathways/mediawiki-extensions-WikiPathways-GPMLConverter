@@ -31,8 +31,8 @@ Try converting some data.
 The bare metal version
 ```sh
 $ curl "http://vm1.wikipathways.org/Pathway:WP554?action=raw&oldid=77712" | \
-    ./node_modules/.bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 \
-    --pathway-version 77712 > WP554.json
+	./node_modules/.bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 \
+	--pathway-version 77712 > WP554.json
 ```
 
 Using the included PHP scripts when this is installed as a MediaWiki extension:

@@ -18,15 +18,10 @@
  * @author Mark A. Hershberger <mah@nichework.com>
  */
 
-namespace WikiPathways;
+namespace WikiPathways\GPML;
 
 # TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
 class GPMLConverter {
-	// TODO is there a better way to define these?
-	public static $gpml2pvjson_path = "/nix/var/nix/profiles/default/bin/gpml2pvjson";
-	public static $bridgedb_path = "/nix/var/nix/profiles/default/bin/bridgedb";
-	public static $jq_path = "/nix/var/nix/profiles/default/bin/jq";
-	public static $pvjs_path = "/nix/var/nix/profiles/default/bin/pvjs";
 
 	private static $SVG_THEMES = [
 		"plain" => "plain",
@@ -34,8 +29,16 @@ class GPMLConverter {
 		"pretty" => "dark",
 	];
 
-	function __construct() {
-		// do something
+	private $pathwayID;
+	private $format;
+
+	public function __construct( $pathwayID, $format = "json" ) {
+		$this->pathwayID = $pathwayID;
+		$this->format = $format;
+	}
+
+	public function setOutput( $name ) {
+		$this->outfh = fopen( $name );
 	}
 
 	public static function writeStream( $pipes, $proc ) {
@@ -110,10 +113,11 @@ class GPMLConverter {
 	}
 
 	public static function gpml2pvjson( $gpml, $opts ) {
-		$gpml2pvjson_path = self::$gpml2pvjson_path;
-		$bridgedb_path = self::$bridgedb_path;
-		$jq_path = self::$jq_path;
-		$pvjs_path = self::$pvjs_path;
+		$conf = new Config();
+		$gpml2pvjsonPath = $conf->get( "gpml2pvjsonPath" );
+		$bridgedbPath = $conf->get( "bridgedbPath" );
+		$jqPath = $conf->get( "jqPath" );
+		$pvjsPath = $conf->get( "pvjsPath" );
 
 		if ( empty( $gpml ) ) {
 			wfDebugLog( 'GPMLConverter', "Error: invalid gpml provided" );
@@ -125,8 +129,8 @@ class GPMLConverter {
 		$organism = escapeshellarg( $opts["organism"] );
 
 		$toPvjsonCmd = <<<TEXT
-$gpml2pvjson_path --id $identifier --pathway-version $version | \
-$jq_path -rc '. as {\$pathway} | (.entityMap | .[] |= (.type += if .dbId then [.dbConventionalName + ":" + .dbId] else [] end )) as \$entityMap | {\$pathway, \$entityMap}'
+$gpml2pvjsonPath --id $identifier --pathway-version $version | \
+$jqPath -rc '. as {\$pathway} | (.entityMap | .[] |= (.type += if .dbId then [.dbConventionalName + ":" + .dbId] else [] end )) as \$entityMap | {\$pathway, \$entityMap}'
 TEXT;
 		$rawPvjsonString = '';
 		try{
@@ -141,9 +145,9 @@ TEXT;
 		}
 
 		$xrefsBatchCmd = <<<TEXT
-$jq_path -rc '.entityMap[] | select(has("dbId") and has("dbConventionalName") and .gpmlElementName == "DataNode" and (.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" or .wpType == "Metabolite") and .dbConventionalName != "undefined" and .dbId != "undefined") | .dbConventionalName + "," + .dbId' | \
-$bridgedb_path xrefsBatch --organism $organism | \
-$jq_path -rc --slurp 'reduce .[] as \$entity ({}; .[\$entity.dbConventionalName + ":" + \$entity.dbId] = \$entity)';
+$jqPath -rc '.entityMap[] | select(has("dbId") and has("dbConventionalName") and .gpmlElementName == "DataNode" and (.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" or .wpType == "Metabolite") and .dbConventionalName != "undefined" and .dbId != "undefined") | .dbConventionalName + "," + .dbId' | \
+$bridgedbPath xrefsBatch --organism $organism | \
+$jqPath -rc --slurp 'reduce .[] as \$entity ({}; .[\$entity.dbConventionalName + ":" + \$entity.dbId] = \$entity)';
 TEXT;
 		$bridgedbResultString = '';
 
@@ -203,8 +207,9 @@ TEXT;
 	}
 
 	public static function pvjson2svg( $pvjson, $opts ) {
-		$jq_path = self::$jq_path;
-		$pvjs_path = self::$pvjs_path;
+		$conf = new Config();
+		$jqPath = $conf->get( "jqPath" );
+		$pvjsPath = $conf->get( "pvjsPath" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( 'GPMLConverter', "Error: invalid pvjson provided\n" );
@@ -222,7 +227,7 @@ TEXT;
 
 		try{
 			$streamPvjsonToSvg = self::createStream(
-				"$pvjs_path $reactOpt $themeOpt", [ "timeout" => 10 ]
+				"$pvjsPath $reactOpt $themeOpt", [ "timeout" => 10 ]
 			);
 			return $streamPvjsonToSvg( $pvjson, true );
 		} catch ( Exception $e ) {
