@@ -9,10 +9,25 @@
 	"license-name": "Apache-2.0",
 	"type": "other",
 	"config": {
-		"gpml2pvjson": "/nix/store/ajvvpfjdndqkjxfa1zai9zg0rsf8z5x0-node-gpml2pvjson-3.0.0-5/bin/gpml2pvjson"
+		"_prefix": "wpi",
+		"gpml2pvjsonPath": "node_modules/.bin/gpml2pvjson",
+		"bridgedbPath": "node_modules/.bin/bridgedb",
+		"jqPath": "/usr/bin/jq",
+		"pvjsPath": "node_modules/.bin/pvjs"
 	},
 	"requires": {
 		"MediaWiki": ">= 1.27.0"
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "node_modules",
+		"remoteExtPath": "GPMLConverter/node_modules"
+	},
+	"ResourceModules": {
+		"wpi.pvjs": {
+			"scripts": [
+				"@wikipathways/pvjs/dist/pvjs.js"
+			]
+		}
 	},
 	"AutoloadClasses": {
 		"WikiPathways\\GPML\\Converter": "src/Converter.php"

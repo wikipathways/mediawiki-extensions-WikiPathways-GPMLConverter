@@ -20,10 +20,13 @@
 
 namespace WikiPathways\GPML;
 
+use GlobalVarConfig;
+use Exception;
+
 # TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
 class Converter {
 
-	private static $SVG_THEMES = [
+	private static $svgThemes = [
 		"plain" => "plain",
 		"dark" => "dark",
 		"pretty" => "dark",
@@ -112,15 +115,22 @@ class Converter {
 		}
 	}
 
-	public static function gpml2pvjson( $gpml, $opts ) {
-		$conf = new Config();
-		$gpml2pvjsonPath = $conf->get( "gpml2pvjsonPath" );
-		$bridgedbPath = $conf->get( "bridgedbPath" );
-		$jqPath = $conf->get( "jqPath" );
-		$pvjsPath = $conf->get( "pvjsPath" );
+	private static function getPath( $pathKey ) {
+		$conf = new GlobalVarConfig( "wpi" );
+		$path = $conf->get( $pathKey );
+		if ( !file_exists( $path ) ) {
+			$path = __DIR__ . "/../" . $path;
+		}
+		return $path;
+	}
 
-		if ( empty( $gpml ) ) {
-			wfDebugLog( 'GPMLConverter', "Error: invalid gpml provided" );
+	public static function gpml2pvjson( $gpml, $opts ) {
+		$gpml2pvjsonPath = self::getPath( "gpml2pvjsonPath" );
+		$bridgedbPath = self::getPath( "bridgedbPath" );
+		$jqPath = self::getPath( "jqPath" );
+
+		if ( !$gpml ) {
+			throw new \MWException( "Error: invalid gpml provided" );
 			return;
 		}
 
@@ -163,7 +173,8 @@ TEXT;
 		}
 
 		// TODO Are we actually saving any time by doing this instead of just parsing it as JSON?
-		if ( !$bridgedbResultString || empty( $bridgedbResultString ) || $bridgedbResultString == '{}' || $bridgedbResultString == '[]' ) {
+		if ( !$bridgedbResultString
+			 || $bridgedbResultString == '{}' || $bridgedbResultString == '[]' ) {
 			return $rawPvjsonString;
 		}
 
@@ -177,7 +188,7 @@ TEXT;
 			$pvjson = json_decode( $rawPvjsonString );
 			$pathway = $pvjson->pathway;
 			$entityMap = $pvjson->entityMap;
-			foreach ( $entityMap as $key => $value ) {
+			foreach ( $entityMap as $value ) {
 				if ( property_exists( $value, 'dbConventionalName' ) && property_exists( $value, 'dbId' ) ) {
 					$xrefId = $value->dbConventionalName.":".$value->dbId;
 					if ( property_exists( $bridgedbResult, $xrefId ) ) {
@@ -207,9 +218,7 @@ TEXT;
 	}
 
 	public static function pvjson2svg( $pvjson, $opts ) {
-		$conf = new Config();
-		$jqPath = $conf->get( "jqPath" );
-		$pvjsPath = $conf->get( "pvjsPath" );
+		$pvjsPath = self::getPath( "pvjsPath" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( 'GPMLConverter', "Error: invalid pvjson provided\n" );
@@ -218,11 +227,11 @@ TEXT;
 			return;
 		}
 
-		$reactOpt = (isset($opts["react"]) && $opts["react"] == true)
+		$reactOpt = ( isset( $opts["react"] ) && $opts["react"] == true )
 				  ? " --react"
 				  : "";
-		$themeOpt = (isset($opts["theme"]) && self::$SVG_THEMES[$opts["theme"]])
-				  ? "--theme " . escapeshellarg(self::$SVG_THEMES[$opts["theme"]])
+		$themeOpt = ( isset( $opts["theme"] ) && self::$svgThemes[$opts["theme"]] )
+				  ? "--theme " . escapeshellarg( self::$svgThemes[$opts["theme"]] )
 				  : "";
 
 		try{
