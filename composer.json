@@ -26,9 +26,9 @@
 	],
 	"autoload" : {
 		"psr-4": {
-			"WikiPathways\\GPMLConverter\\Tests\\" : "tests/phpunit",
-			"WikiPathways\\GPMLConverter\\Maintenance\\" : "maintenance",
-			"WikiPathways\\GPMLConverter\\" : "src"
+			"WikiPathways\\GPML\\Converter\\Tests\\" : "tests/phpunit",
+			"WikiPathways\\GPML\\Converter\\Maintenance\\" : "maintenance",
+			"WikiPathways\\GPML\\" : "src"
 		}
 	},
 	"require": {

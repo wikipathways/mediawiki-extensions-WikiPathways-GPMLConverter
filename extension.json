@@ -15,6 +15,6 @@
 		"MediaWiki": ">= 1.27.0"
 	},
 	"AutoloadClasses": {
-		"WikiPathways\\GPML\\Converter": "src/GPMLConverter.php"
+		"WikiPathways\\GPML\\Converter": "src/Converter.php"
 	}
 }

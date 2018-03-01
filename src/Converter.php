@@ -21,7 +21,7 @@
 namespace WikiPathways\GPML;
 
 # TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
-class GPMLConverter {
+class Converter {
 
 	private static $SVG_THEMES = [
 		"plain" => "plain",
