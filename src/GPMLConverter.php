@@ -126,7 +126,25 @@ class GPMLConverter {
 
 		$toPvjsonCmd = <<<TEXT
 $gpml2pvjson_path --id $identifier --pathway-version $version | \
-$jq_path -rc '. as {\$pathway} | (.entityMap | .[] |= (.type += if .dbId then [.dbConventionalName + ":" + .dbId] else [] end )) as \$entityMap | {\$pathway, \$entityMap}'
+$bridgedb_path xrefs -f 'json' -i '.entitiesById' $organism '.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' \
+	ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata
+TEXT;
+
+		try{
+			// TODO: this timeout should be updated or removed when we get async caching working
+			$streamGpml2Pvjson = self::createStream( "$toPvjsonCmd", [ "timeout" => 10 ] );
+			return $streamGpml2Pvjson( $gpml, true );
+		} catch ( Exception $e ) {
+			wfDebugLog( 'GPMLConverter', "Error converting GPML to PVJSON:" );
+			wfDebugLog( 'GPMLConverter', $e );
+			wfDebugLog( 'GPMLConverter', "\n" );
+			return '';
+		}
+		/*
+		$rawPvjsonString = '';
+		$toPvjsonCmd_old = <<<TEXT
+$gpml2pvjson_path --id $identifier --pathway-version $version | \
+$jq_path -rc '. as {\$pathway} | (.entitiesById | .[] |= (.type += if .dbId then [.dbConventionalName + ":" + .dbId] else [] end )) as \$entitiesById | {\$pathway, \$entitiesById}'
 TEXT;
 		$rawPvjsonString = '';
 		try{
@@ -139,9 +157,10 @@ TEXT;
 			wfDebugLog( 'GPMLConverter', "\n" );
 			return $rawPvjsonString;
 		}
+		return $rawPvjsonString;
 
 		$xrefsBatchCmd = <<<TEXT
-$jq_path -rc '.entityMap[] | select(has("dbId") and has("dbConventionalName") and .gpmlElementName == "DataNode" and (.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" or .wpType == "Metabolite") and .dbConventionalName != "undefined" and .dbId != "undefined") | .dbConventionalName + "," + .dbId' | \
+$jq_path -rc '.entitiesById[] | select(has("dbId") and has("dbConventionalName") and .gpmlElementName == "DataNode" and (.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" or .wpType == "Metabolite") and .dbConventionalName != "undefined" and .dbId != "undefined") | .dbConventionalName + "," + .dbId' | \
 $bridgedb_path xrefsBatch --organism $organism | \
 $jq_path -rc --slurp 'reduce .[] as \$entity ({}; .[\$entity.dbConventionalName + ":" + \$entity.dbId] = \$entity)';
 TEXT;
@@ -172,8 +191,8 @@ TEXT;
 			$bridgedbResult = json_decode( $bridgedbResultString );
 			$pvjson = json_decode( $rawPvjsonString );
 			$pathway = $pvjson->pathway;
-			$entityMap = $pvjson->entityMap;
-			foreach ( $entityMap as $key => $value ) {
+			$entitiesById = $pvjson->entitiesById;
+			foreach ( $entitiesById as $key => $value ) {
 				if ( property_exists( $value, 'dbConventionalName' ) && property_exists( $value, 'dbId' ) ) {
 					$xrefId = $value->dbConventionalName.":".$value->dbId;
 					if ( property_exists( $bridgedbResult, $xrefId ) ) {
@@ -193,13 +212,14 @@ TEXT;
 				}
 			}
 
-			return json_encode( [ "pathway" => $pathway, "entityMap" => $entityMap ] );
+			return json_encode( [ "pathway" => $pathway, "entitiesById" => $entitiesById ] );
 		} catch ( Exception $e ) {
 			wfDebugLog( 'GPMLConverter', "Error integrating unified xrefs with pvjson:" );
 			wfDebugLog( 'GPMLConverter', $e );
 			wfDebugLog( 'GPMLConverter', "\n" );
 			return $rawPvjsonString;
 		}
+		//*/
 	}
 
 	public static function pvjson2svg( $pvjson, $opts ) {

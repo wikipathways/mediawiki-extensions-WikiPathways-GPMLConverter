@@ -60,8 +60,10 @@ nix-collect-garbage -d;
 
 rm -f default.nix node-packages.nix node-env.nix;
 echo "Installing Nodejs dependencies...";
+cat package.json | jq '.dependencies | to_entries | map({(.key): .value})' > node-packages.json;
 node2nix --flatten -6 -i node-packages.json
 nix-env -f default.nix -i
+rm node-packages.json;
 
 echo "Setting Apache env variable PATH to use Nix bin...";
 APACHE_ENV_VARS_PATH="/etc/apache2/envvars";
@@ -76,10 +78,14 @@ echo "Creating symlink to browser version of pvjs.js";
 executable_pvjs_symlink=`which pvjs`;
 executable_pvjs=`readlink $executable_pvjs_symlink`;
 executable_pvjs_dir="`dirname $executable_pvjs`/..";
-browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
-browser_pvjs_symlink="./pvjs.js";
+browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.vanilla.js"`;
+browser_pvjs_symlink="./pvjs.vanilla.js";
+
 rm -f "$browser_pvjs_symlink";
 ln -s "$browser_pvjs" "$browser_pvjs_symlink";
+
+rm -f "$browser_pvjs_symlink.map";
+ln -s "$browser_pvjs.map" "$browser_pvjs_symlink.map";
 
 echo "Symlink created:";
 echo `ls -l $browser_pvjs_symlink`;
