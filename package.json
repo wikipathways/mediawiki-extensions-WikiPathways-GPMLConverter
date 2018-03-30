@@ -1,0 +1,11 @@
+{
+	"name": "gpml-converter",
+	"version": "0.0.1",
+	"license": "Apache-2.0",
+	"repository": "https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git",
+	"dependencies": {
+		"bridgedb": "6.0.2",
+		"gpml2pvjson": "4.1.1",
+		"@wikipathways/pvjs": "4.0.4"
+	}
+}
