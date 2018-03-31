@@ -1,8 +1,8 @@
 default.nix
+!pathvisio/default.nix
 node-env.nix
 node-packages.nix
 pvjs.js
-
 vendor
 package-lock.json
 composer.lock
