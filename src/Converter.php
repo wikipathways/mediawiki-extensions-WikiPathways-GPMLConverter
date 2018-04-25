@@ -68,13 +68,13 @@ class Converter {
 
 				if ( $info['timed_out'] ) {
 					wfDebugLog( 'GPMLConverter', "Error: pipe timed out\n" );
-					trigger_error( 'pipe timed out', E_USER_NOTICE );
+					error_log( 'pipe timed out' );
 				}
 
 				proc_close( $proc );
 
 				if ( $err ) {
-					trigger_error( $err, E_USER_NOTICE );
+					error_log( $err );
 				}
 
 				return $result;
