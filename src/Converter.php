@@ -20,77 +20,74 @@
 
 namespace WikiPathways\GPML;
 
-use GlobalVarConfig;
 use Exception;
+use GlobalVarConfig;
+use MWException;
 
-# TODO do we want to use trigger_error and try/catch/finally, or is it enough to just return false?
-class Converter {
+class ConvertStream {
+	private static $cmd;
 
-	private static $svgThemes = [
-		"plain" => "plain",
-		"dark" => "dark",
-		"pretty" => "dark",
-	];
-
-	private $pathwayID;
-	private $format;
-
-	public function __construct( $pathwayID, $format = "json" ) {
-		$this->pathwayID = $pathwayID;
-		$this->format = $format;
-	}
-
-	public function setOutput( $name ) {
-		$this->outfh = fopen( $name );
-	}
-
+	/**
+	 * @param array $pipes for input output, etc
+	 * @param resource $proc open process
+	 * @return bool|function
+	 */
 	public static function writeStream( $pipes, $proc ) {
 		return function ( $data, $end ) use( $pipes, $proc ) {
-			try{
-				$stdin = $pipes[0];
-				$stdout = $pipes[1];
-				$stderr = $pipes[2];
+			$stdin = $pipes[0];
+			$stdout = $pipes[1];
+			$stderr = $pipes[2];
 
-				fwrite( $stdin, $data );
+			$bytes = fwrite( $stdin, $data );
 
-				if ( !isset( $end ) || $end != true ) {
-					wfDebugLog( 'GPMLConverter', "Ending stream\n" );
-					return self::writeStream( $pipes, $proc );
-				}
-
-				fclose( $stdin );
-
-				$result = stream_get_contents( $stdout );
-				$info = stream_get_meta_data( $stdout );
-				$err = stream_get_contents( $stderr );
-
-				fclose( $stderr );
-
-				if ( $info['timed_out'] ) {
-					wfDebugLog( 'GPMLConverter', "Error: pipe timed out\n" );
-					error_log( 'pipe timed out' );
-				}
-
-				proc_close( $proc );
-
+			if ( $bytes === false ) {
+				$err = error_get_last();
 				if ( $err ) {
-					error_log( $err );
+					throw new MWException( "Problem writing stream: " . $err['message'] );
 				}
 
-				return $result;
-			} catch ( Exception $e ) {
 				proc_close( $proc );
-				wfDebugLog( 'GPMLConverter', "Error in self::writeStream():\n" );
-				wfDebugLog( 'GPMLConverter', $e );
-				wfDebugLog( 'GPMLConverter', "\n" );
-				trigger_error( $e, E_USER_NOTICE );
+				return false;
 			}
+
+			if ( !isset( $end ) || $end !== true ) {
+				wfDebugLog( 'GPMLConverter', "Ending stream\n" );
+				return self::writeStream( $pipes, $proc );
+			}
+
+			fclose( $stdin );
+
+			$result = stream_get_contents( $stdout );
+			$info = stream_get_meta_data( $stdout );
+			$err = stream_get_contents( $stderr );
+
+			fclose( $stderr );
+
+			if ( $info['timed_out'] ) {
+				wfDebugLog( 'GPMLConverter', "Error: pipe timed out\n" );
+				error_log( 'pipe timed out' );
+			}
+
+			proc_close( $proc );
+
+			if ( $err ) {
+				error_log( "$err for " . self::$cmd );
+				throw new MWException( "Error during " . self::$cmd . ": $err" );
+			}
+
+			return $result;
 		};
 	}
 
+	/**
+	 * @param string $cmd to run
+	 * @param array $opts timeout holder
+	 * @return bool|callable
+	 */
 	public static function createStream( $cmd, $opts = [] ) {
 		$timeout = $opts["timeout"];
 
+		self::$cmd = $cmd;
 		$proc = proc_open( "cat - | $cmd",
 						  [
 							  [ "pipe","r" ],
@@ -114,7 +111,42 @@ class Converter {
 			return false;
 		}
 	}
+}
 
+class Converter {
+
+	private static $svgThemes = [
+		"plain" => "plain",
+		"dark" => "dark",
+		"pretty" => "dark",
+	];
+
+	private $pathwayID;
+	private $format;
+	private $bridgedbResult;
+
+	/**
+	 * @param string $pathwayID for pathway
+	 * @param string $format json or whatever
+	 */
+	public function __construct( $pathwayID, $format = "json" ) {
+		$this->pathwayID = $pathwayID;
+		$this->format = $format;
+	}
+
+	/**
+	 * @param string $name where to write
+	 */
+	public function setOutput( $name ) {
+		$this->outfh = fopen( $name );
+	}
+
+	private static $gpml2pvjsonPath;
+	private static $bridgedbPath;
+	private static $jqPath;
+	private static $organism;
+	private static $identifier;
+	private static $version;
 	private static function getPath( $pathKey ) {
 		$conf = new GlobalVarConfig( "wpi" );
 		$path = $conf->get( $pathKey );
@@ -124,53 +156,120 @@ class Converter {
 		return $path;
 	}
 
-	public static function gpml2pvjson( $gpml, $opts ) {
-		$gpml2pvjsonPath = self::getPath( "gpml2pvjsonPath" );
-		$bridgedbPath = self::getPath( "bridgedbPath" );
-		$jqPath = self::getPath( "jqPath" );
+	private static function setup( $opts ) {
+		self::$gpml2pvjsonPath = self::getPath( "gpml2pvjsonPath" );
+		self::$bridgedbPath = self::getPath( "bridgedbPath" );
+		self::$jqPath = self::getPath( "jqPath" );
+		self::$organism = escapeshellarg( $opts["organism"] );
+		self::$identifier = escapeshellarg( $opts["identifier"] );
+		self::$version = escapeshellarg( $opts["version"] );
+	}
 
+	private static function getToPvjsonCmd( array $opts ) {
+		self::setup( $opts );
+
+		return sprintf(
+			'%s --id %s --pathway-version %s',
+			self::$gpml2pvjsonPath, self::$identifier, self::$version
+		) . '|' . sprintf(
+			'%s -rc \'. as {$pathway} | (.entityMap | .[] |= (.type += if .dbId then '
+			. '[.dbConventionalName + ":" + .dbId] else [] end )) '
+			. 'as $entityMap | {$pathway, $entityMap}\'', self::$jqPath
+		);
+	}
+
+	private static function getPvjsonOutput( $gpml, $opts ) {
+		// TODO: this timeout should be updated or removed when we get async caching working
+		$toPvjsonCmd = self::getToPvjsonCmd( $opts );
+		$streamGpml2Pvjson = ConvertStream::createStream( $toPvjsonCmd, [ "timeout" => 10 ] );
+		if ( !$streamGpml2Pvjson ) {
+			$err = error_get_last();
+			throw new \MWException(
+				"Error Converting GPML to PVJSON: "
+				. $err["message"] . " (" . $err["file"] . ":" . $err["line"] . ")"
+			);
+			return '';
+		}
+		return $streamGpml2Pvjson( $gpml, true );
+	}
+
+	private static function getXrefsBatchCmd( array $opts ) {
+		self::setup( $opts );
+
+		return sprintf(
+			'%s -rc \'.entityMap[] | select(has("dbId") and has("dbConventionalName") '
+			. 'and .gpmlElementName == "DataNode" and '
+			. '(.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" '
+			. 'or .wpType == "Metabolite") and .dbConventionalName != "undefined" and '
+			. '.dbId != "undefined") | .dbConventionalName + "," + .dbId\'', self::$jqPath
+		) . ' | ' . sprintf(
+			'%s xrefsBatch --organism %s', self::$bridgedbPath, self::$organism
+		) . ' | ' . sprintf(
+			'%s -rc --slurp \'reduce .[] as $entity ({}; .[$entity.dbConventionalName + '
+			. '":" + $entity.dbId] = $entity)\'', self::$jqPath
+		);
+	}
+
+	private static function getBridgeDBOutput( $opts, $rawPvjsonString ) {
+		// TODO: this timeout should be updated or removed when we get async caching working
+		$xrefsBatchCmd = self::getXrefsBatchCmd( $opts );
+		$writeToBridgeDbStream = ConvertStream::createStream( $xrefsBatchCmd, [ "timeout" => 10 ] );
+		if ( !$writeToBridgeDbStream ) {
+			wfDebugLog( 'GPMLConverter', "Error using BridgeDb to unify Xrefs:" );
+			return $rawPvjsonString;
+		}
+		return $writeToBridgeDbStream( $rawPvjsonString, true );
+	}
+
+	private function extractPathwayAndEntityMap( $pvjson ) {
+		$pathway = $pvjson->pathway;
+		$entityMap = $pvjson->entityMap;
+		foreach ( $entityMap as $value ) {
+			if (
+				property_exists( $value, 'dbConventionalName' )
+				&& property_exists( $value, 'dbId' )
+			) {
+				$xrefId = $value->dbConventionalName.":".$value->dbId;
+				if ( property_exists( $this->bridgedbResult, $xrefId ) ) {
+					$mapper = $this->bridgedbResult->$xrefId;
+					if ( property_exists( $mapper, 'xrefs' ) ) {
+						$xrefs = $mapper->xrefs;
+						foreach ( $xrefs as $xref ) {
+							if (
+								property_exists( $xref, 'isDataItemIn' )
+								&& property_exists( $xref, 'dbId' )
+							) {
+								$datasource = $xref->isDataItemIn;
+								if ( property_exists( $datasource, 'preferredPrefix' ) ) {
+									array_push(
+										$value->type, "$datasource->preferredPrefix:$xref->dbId"
+									);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return json_encode( [ "pathway" => $pathway, "entityMap" => $entityMap ] );
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function gpml2pvjson( $gpml, $opts ) {
 		if ( !$gpml ) {
 			throw new \MWException( "Error: invalid gpml provided" );
-			return;
 		}
+		$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
 
-		$identifier = escapeshellarg( $opts["identifier"] );
-		$version = escapeshellarg( $opts["version"] );
-		$organism = escapeshellarg( $opts["organism"] );
-
-		$toPvjsonCmd = <<<TEXT
-$gpml2pvjsonPath --id $identifier --pathway-version $version | \
-$jqPath -rc '. as {\$pathway} | (.entityMap | .[] |= (.type += if .dbId then [.dbConventionalName + ":" + .dbId] else [] end )) as \$entityMap | {\$pathway, \$entityMap}'
-TEXT;
-		$rawPvjsonString = '';
-		try{
-			// TODO: this timeout should be updated or removed when we get async caching working
-			$streamGpml2Pvjson = self::createStream( "$toPvjsonCmd", [ "timeout" => 10 ] );
-			$rawPvjsonString = $streamGpml2Pvjson( $gpml, true );
-		} catch ( Exception $e ) {
-			wfDebugLog( 'GPMLConverter', "Error converting GPML to PVJSON:" );
-			wfDebugLog( 'GPMLConverter', $e );
-			wfDebugLog( 'GPMLConverter', "\n" );
+		if ( !$rawPvjsonString ) {
 			return $rawPvjsonString;
 		}
-
-		$xrefsBatchCmd = <<<TEXT
-$jqPath -rc '.entityMap[] | select(has("dbId") and has("dbConventionalName") and .gpmlElementName == "DataNode" and (.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" or .wpType == "Metabolite") and .dbConventionalName != "undefined" and .dbId != "undefined") | .dbConventionalName + "," + .dbId' | \
-$bridgedbPath xrefsBatch --organism $organism | \
-$jqPath -rc --slurp 'reduce .[] as \$entity ({}; .[\$entity.dbConventionalName + ":" + \$entity.dbId] = \$entity)';
-TEXT;
-		$bridgedbResultString = '';
-
-		try{
-			// TODO: this timeout should be updated or removed when we get async caching working
-			$writeToBridgeDbStream = self::createStream( "$xrefsBatchCmd", [ "timeout" => 10 ] );
-			$bridgedbResultString = $writeToBridgeDbStream( $rawPvjsonString, true );
-		} catch ( Exception $e ) {
-			wfDebugLog( 'GPMLConverter', "Error using BridgeDb to unify Xrefs:" );
-			wfDebugLog( 'GPMLConverter', $e );
-			wfDebugLog( 'GPMLConverter', "\n" );
-			return $rawPvjsonString;
-		}
+		$bridgedbResultString = self::getBridgeDBoutput( $opts, $rawPvjsonString );
 
 		// TODO Are we actually saving any time by doing this instead of just parsing it as JSON?
 		if ( !$bridgedbResultString
@@ -183,41 +282,33 @@ TEXT;
 			return $rawPvjsonString;
 		}
 
-		try{
-			$bridgedbResult = json_decode( $bridgedbResultString );
-			$pvjson = json_decode( $rawPvjsonString );
-			$pathway = $pvjson->pathway;
-			$entityMap = $pvjson->entityMap;
-			foreach ( $entityMap as $value ) {
-				if ( property_exists( $value, 'dbConventionalName' ) && property_exists( $value, 'dbId' ) ) {
-					$xrefId = $value->dbConventionalName.":".$value->dbId;
-					if ( property_exists( $bridgedbResult, $xrefId ) ) {
-						$mapper = $bridgedbResult->$xrefId;
-						if ( property_exists( $mapper, 'xrefs' ) ) {
-							$xrefs = $mapper->xrefs;
-							foreach ( $xrefs as $xref ) {
-								if ( property_exists( $xref, 'isDataItemIn' ) && property_exists( $xref, 'dbId' ) ) {
-									$datasource = $xref->isDataItemIn;
-									if ( property_exists( $datasource, 'preferredPrefix' ) ) {
-										array_push( $value->type, "$datasource->preferredPrefix:$xref->dbId" );
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			return json_encode( [ "pathway" => $pathway, "entityMap" => $entityMap ] );
-		} catch ( Exception $e ) {
-			wfDebugLog( 'GPMLConverter', "Error integrating unified xrefs with pvjson:" );
-			wfDebugLog( 'GPMLConverter', $e );
-			wfDebugLog( 'GPMLConverter', "\n" );
+		$this->bridgedbResult = json_decode( $bridgedbResultString );
+		if ( !$this->bridgedbResult ) {
+			self::error( "Did not get proper json for bridgeDB" );
 			return $rawPvjsonString;
 		}
+
+		$pvjson = json_decode( $rawPvjsonString );
+		if ( !$pvjson ) {
+			self::error( "Did not get proper json for PV" );
+			return $rawPvjsonString;
+		}
+
+		return $this->extractPathwayAndEntityMap( $pvjson );
 	}
 
-	public static function pvjson2svg( $pvjson, $opts ) {
+	private static function error( $error ) {
+		wfDebugLog( 'GPMLConverter', "Error integrating unified xrefs with pvjson:" );
+		wfDebugLog( 'GPMLConverter', $error );
+		wfDebugLog( 'GPMLConverter', "\n" );
+	}
+
+	/**
+	 * @param string $pvjson JSON equiv of pv
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getPvjson2svg( $pvjson, $opts ) {
 		$pvjsPath = self::getPath( "pvjsPath" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
@@ -235,7 +326,7 @@ TEXT;
 				  : "";
 
 		try{
-			$streamPvjsonToSvg = self::createStream(
+			$streamPvjsonToSvg = ConvertStream::createStream(
 				"$pvjsPath $reactOpt $themeOpt", [ "timeout" => 10 ]
 			);
 			return $streamPvjsonToSvg( $pvjson, true );
