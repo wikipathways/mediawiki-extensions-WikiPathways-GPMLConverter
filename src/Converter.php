@@ -258,17 +258,20 @@ class Converter {
 	/**
 	 * @param string $gpml XML of the gpml
 	 * @param array $opts options
-	 * @return string
+	 * @return string|bool false if an error
 	 */
 	public function gpml2pvjson( $gpml, $opts ) {
 		if ( !$gpml ) {
-			throw new \MWException( "Error: invalid gpml provided" );
+			error_log( "Invalid GPML provided" );
+			return false;
 		}
-		$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
+		try {
+			$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
+		} catch ( Exception $e ) {
+			error_log( "Error from getPvjsonOutput: " . $e->getMessage() );
+			return false;
+		}
 
-		if ( !$rawPvjsonString ) {
-			return $rawPvjsonString;
-		}
 		$bridgedbResultString = self::getBridgeDBoutput( $opts, $rawPvjsonString );
 
 		// TODO Are we actually saving any time by doing this instead of just parsing it as JSON?
