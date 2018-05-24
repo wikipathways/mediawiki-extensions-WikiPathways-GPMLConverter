@@ -123,7 +123,6 @@ class Converter {
 
 	private $pathwayID;
 	private $format;
-	private $bridgedbResult;
 
 	/**
 	 * @param string $pathwayID for pathway
@@ -172,9 +171,10 @@ class Converter {
 			'%s --id %s --pathway-version %s',
 			self::$gpml2pvjsonPath, self::$identifier, self::$version
 		) . '|' . sprintf(
-			'%s -rc \'. as {$pathway} | (.entityMap | .[] |= (.type += if .dbId then '
-			. '[.dbConventionalName + ":" + .dbId] else [] end )) '
-			. 'as $entityMap | {$pathway, $entityMap}\'', self::$jqPath
+			"%s xrefs -f 'json' -i '.entitiesById' %s "
+			. "'.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' "
+			. "ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata",
+			self::$bridgedbPath, self::$organism
 		);
 	}
 
@@ -193,68 +193,6 @@ class Converter {
 		return $streamGpml2Pvjson( $gpml, true );
 	}
 
-	private static function getXrefsBatchCmd( array $opts ) {
-		self::setup( $opts );
-
-		return sprintf(
-			'%s -rc \'.entityMap[] | select(has("dbId") and has("dbConventionalName") '
-			. 'and .gpmlElementName == "DataNode" and '
-			. '(.wpType == "GeneProduct" or .wpType == "Protein" or .wpType == "Rna" '
-			. 'or .wpType == "Metabolite") and .dbConventionalName != "undefined" and '
-			. '.dbId != "undefined") | .dbConventionalName + "," + .dbId\'', self::$jqPath
-		) . ' | ' . sprintf(
-			'%s xrefsBatch --organism %s', self::$bridgedbPath, self::$organism
-		) . ' | ' . sprintf(
-			'%s -rc --slurp \'reduce .[] as $entity ({}; .[$entity.dbConventionalName + '
-			. '":" + $entity.dbId] = $entity)\'', self::$jqPath
-		);
-	}
-
-	private static function getBridgeDBOutput( $opts, $rawPvjsonString ) {
-		// TODO: this timeout should be updated or removed when we get async caching working
-		$xrefsBatchCmd = self::getXrefsBatchCmd( $opts );
-		$writeToBridgeDbStream = ConvertStream::createStream( $xrefsBatchCmd, [ "timeout" => 10 ] );
-		if ( !$writeToBridgeDbStream ) {
-			wfDebugLog( 'GPMLConverter', "Error using BridgeDb to unify Xrefs:" );
-			return $rawPvjsonString;
-		}
-		return $writeToBridgeDbStream( $rawPvjsonString, true );
-	}
-
-	private function extractPathwayAndEntityMap( $pvjson ) {
-		$pathway = $pvjson->pathway;
-		$entityMap = $pvjson->entityMap;
-		foreach ( $entityMap as $value ) {
-			if (
-				property_exists( $value, 'dbConventionalName' )
-				&& property_exists( $value, 'dbId' )
-			) {
-				$xrefId = $value->dbConventionalName.":".$value->dbId;
-				if ( property_exists( $this->bridgedbResult, $xrefId ) ) {
-					$mapper = $this->bridgedbResult->$xrefId;
-					if ( property_exists( $mapper, 'xrefs' ) ) {
-						$xrefs = $mapper->xrefs;
-						foreach ( $xrefs as $xref ) {
-							if (
-								property_exists( $xref, 'isDataItemIn' )
-								&& property_exists( $xref, 'dbId' )
-							) {
-								$datasource = $xref->isDataItemIn;
-								if ( property_exists( $datasource, 'preferredPrefix' ) ) {
-									array_push(
-										$value->type, "$datasource->preferredPrefix:$xref->dbId"
-									);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		return json_encode( [ "pathway" => $pathway, "entityMap" => $entityMap ] );
-	}
-
 	/**
 	 * @param string $gpml XML of the gpml
 	 * @param array $opts options
@@ -262,48 +200,16 @@ class Converter {
 	 */
 	public function gpml2pvjson( $gpml, $opts ) {
 		if ( !$gpml ) {
-			error_log( "Invalid GPML provided" );
+			wfDebugLog( 'GPMLConverter', "Error: invalid gpml provided" );
 			return false;
 		}
 		try {
 			$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
 		} catch ( Exception $e ) {
-			error_log( "Error from getPvjsonOutput: " . $e->getMessage() );
+			wfDebugLog( 'GPMLConverer', "Error converting GPML to PVJSON: " . $e->getMessage() );
 			return false;
 		}
-
-		$bridgedbResultString = self::getBridgeDBoutput( $opts, $rawPvjsonString );
-
-		// TODO Are we actually saving any time by doing this instead of just parsing it as JSON?
-		if ( !$bridgedbResultString
-			 || $bridgedbResultString == '{}' || $bridgedbResultString == '[]' ) {
-			return $rawPvjsonString;
-		}
-
-		// TODO use jq to stream result and only extract what we need
-		if ( strlen( $bridgedbResultString ) > 5 * 1000 * 1000 ) {
-			return $rawPvjsonString;
-		}
-
-		$this->bridgedbResult = json_decode( $bridgedbResultString );
-		if ( !$this->bridgedbResult ) {
-			self::error( "Did not get proper json for bridgeDB" );
-			return $rawPvjsonString;
-		}
-
-		$pvjson = json_decode( $rawPvjsonString );
-		if ( !$pvjson ) {
-			self::error( "Did not get proper json for PV" );
-			return $rawPvjsonString;
-		}
-
-		return $this->extractPathwayAndEntityMap( $pvjson );
-	}
-
-	private static function error( $error ) {
-		wfDebugLog( 'GPMLConverter', "Error integrating unified xrefs with pvjson:" );
-		wfDebugLog( 'GPMLConverter', $error );
-		wfDebugLog( 'GPMLConverter', "\n" );
+		return $rawPvjsonString;
 	}
 
 	/**
