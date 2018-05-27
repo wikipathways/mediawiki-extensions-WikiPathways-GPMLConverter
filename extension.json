@@ -30,6 +30,7 @@
 		}
 	},
 	"AutoloadClasses": {
-		"WikiPathways\\GPML\\Converter": "src/Converter.php"
+		"WikiPathways\\GPML\\Converter": "src/Converter.php",
+		"WikiPathways\\GPML\\ConvertStream": "src/ConvertStream.php"
 	}
 }
