@@ -49,7 +49,7 @@ class ConvertStream {
 			}
 
 			if ( !isset( $end ) || $end !== true ) {
-				wfDebugLog( 'GPMLConverter', "Ending stream\n" );
+				wfDebugLog( __METHOD__, "Ending stream\n" );
 				return self::writeStream( $pipes, $proc );
 			}
 
@@ -62,7 +62,7 @@ class ConvertStream {
 			fclose( $stderr );
 
 			if ( $info['timed_out'] ) {
-				wfDebugLog( 'GPMLConverter', "Error: pipe timed out\n" );
+				wfDebugLog( __METHOD__, "Error: pipe timed out\n" );
 				error_log( 'pipe timed out' );
 			}
 

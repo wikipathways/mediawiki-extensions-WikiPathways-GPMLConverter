@@ -110,7 +110,7 @@ class Converter {
 	 */
 	public function gpml2pvjson( $gpml, $opts ) {
 		if ( !$gpml ) {
-			wfDebugLog( 'GPMLConverter', "Error: invalid gpml provided" );
+			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
 			return false;
 		}
 		try {
@@ -131,9 +131,9 @@ class Converter {
 		$pvjsPath = self::getPath( "pvjsPath" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
-			wfDebugLog( 'GPMLConverter', "Error: invalid pvjson provided\n" );
-			wfDebugLog( 'GPMLConverter', json_encode( $pvjson ) );
-			wfDebugLog( 'GPMLConverter', "\n" );
+			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
+			wfDebugLog( __METHOD__, json_encode( $pvjson ) );
+			wfDebugLog( __METHOD__, "\n" );
 			return;
 		}
 
@@ -150,9 +150,9 @@ class Converter {
 			);
 			return $streamPvjsonToSvg( $pvjson, true );
 		} catch ( Exception $e ) {
-			wfDebugLog( 'GPMLConverter', "Error converting PVJSON to SVG:" );
-			wfDebugLog( 'GPMLConverter', $e );
-			wfDebugLog( 'GPMLConverter', "\n" );
+			wfDebugLog( __METHOD__, "Error converting PVJSON to SVG:" );
+			wfDebugLog( __METHOD__, $e );
+			wfDebugLog( __METHOD__, "\n" );
 			return;
 		}
 	}
