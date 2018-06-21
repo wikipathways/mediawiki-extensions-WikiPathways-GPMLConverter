@@ -19,13 +19,13 @@
 		"MediaWiki": ">= 1.27.0"
 	},
 	"ResourceFileModulePaths": {
-		"localBasePath": "node_modules",
-		"remoteExtPath": "GPMLConverter/node_modules"
+		"localBasePath": "modules",
+		"remoteExtPath": "GPMLConverter/modules/"
 	},
 	"ResourceModules": {
 		"wpi.pvjs": {
 			"scripts": [
-				"@wikipathways/pvjs/dist/pvjs.js"
+				"pvjs.vanilla.js"
 			]
 		}
 	},
