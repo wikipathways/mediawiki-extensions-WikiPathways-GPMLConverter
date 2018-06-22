@@ -1,0 +1,11 @@
+#! /usr/bin/env bash
+
+set -e
+
+rm -f default.nix node-packages.nix;
+
+#node2nix -i ../../package.json -6 --no-copy-node-env -l ../../npm-shrinkwrap.json
+node2nix -i ../../package.json -6 --no-copy-node-env
+sed -i 's#./node-env.nix#"${pkgs.nodePackages_6_x.node2nix.outPath}/lib/node_modules/node2nix/nix/node-env.nix"#g' ./default.nix
+
+#nix-env -f default.nix -i

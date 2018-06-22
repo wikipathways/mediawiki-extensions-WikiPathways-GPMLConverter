@@ -1,6 +1,3 @@
-default.nix
-node-env.nix
-node-packages.nix
 pvjs.js
 
 vendor
