@@ -26,7 +26,7 @@
 	],
 	"autoload" : {
 		"psr-4": {
-			"WikiPathways\\GPML\\Converter\\Tests\\" : "tests/phpunit",
+			"WikiPathways\\GPML\\Converter\\Tests\\" : "tests",
 			"WikiPathways\\GPML\\Converter\\Maintenance\\" : "maintenance",
 			"WikiPathways\\GPML\\" : "src"
 		}
@@ -42,11 +42,12 @@
 		"jakub-onderka/php-parallel-lint": "0.9.2",
 		"jakub-onderka/php-console-highlighter": "0.3.2",
 		"mediawiki/mediawiki-codesniffer": "14.1.0",
-		"phpunit/phpunit": "4.8.36",
-		"phpmd/phpmd": "~2.1"
+		"phpunit/phpunit": "^4.8.36",
+		"phpmd/phpmd": "~2.1",
+		"wikimedia/testing-access-wrapper": "~1.0"
 	},
 	"scripts": {
-		"phpunit": "php $MW_INSTALL_PATH/tests/phpunit/phpunit.php -c .phpunit.xml.dist",
+		"phpunit": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests/phpunit",
 		"phpdbg": "phpdbg -qrr $MW_INSTALL_PATH/tests/phpunit/phpunit.php -c .phpunit.xml.dist",
 		"check": [
 			"parallel-lint . --exclude vendor --exclude node_modules",
