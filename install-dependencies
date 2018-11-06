@@ -77,7 +77,7 @@ executable_pvjs_symlink=`which pvjs`;
 executable_pvjs=`readlink $executable_pvjs_symlink`;
 executable_pvjs_dir="`dirname $executable_pvjs`/..";
 browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
-browser_pvjs_symlink="./pvjs.js";
+browser_pvjs_symlink="./modules/pvjs.vanilla.js";
 rm -f "$browser_pvjs_symlink";
 ln -s "$browser_pvjs" "$browser_pvjs_symlink";
 

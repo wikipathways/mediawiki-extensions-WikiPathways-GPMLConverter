@@ -43,10 +43,11 @@
 		"jakub-onderka/php-console-highlighter": "0.3.2",
 		"mediawiki/mediawiki-codesniffer": "14.1.0",
 		"phpunit/phpunit": "^4.8.36",
-		"phpmd/phpmd": "~2.1"
+		"phpmd/phpmd": "~2.1",
+		"wikimedia/testing-access-wrapper": "~1.0"
 	},
 	"scripts": {
-		"phpunit": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests",
+		"phpunit": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests/phpunit",
 		"phpdbg": "phpdbg -qrr $MW_INSTALL_PATH/tests/phpunit/phpunit.php -c .phpunit.xml.dist",
 		"check": [
 			"parallel-lint . --exclude vendor --exclude node_modules",

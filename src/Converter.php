@@ -24,12 +24,6 @@ use Exception;
 #use GlobalVarConfig;
 
 
-#if ( !wfDebugLog ) {
-#}
-function wfDebugLog( $msg ) {
-	echo $msg;
-}
-
 class Converter {
 
 	private static $svgThemes = [
