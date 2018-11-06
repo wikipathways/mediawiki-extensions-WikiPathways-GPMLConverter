@@ -21,7 +21,14 @@
 namespace WikiPathways\GPML;
 
 use Exception;
-use GlobalVarConfig;
+#use GlobalVarConfig;
+
+
+#if ( !wfDebugLog ) {
+#}
+function wfDebugLog( $msg ) {
+	echo $msg;
+}
 
 class Converter {
 
@@ -56,19 +63,21 @@ class Converter {
 	private static $organism;
 	private static $identifier;
 	private static $version;
+
 	private static function getPath( $pathKey ) {
-		$conf = new GlobalVarConfig( "wpi" );
-		$path = $conf->get( $pathKey );
-		if ( !file_exists( $path ) ) {
-			$path = __DIR__ . "/../" . $path;
-		}
+		#$conf = new GlobalVarConfig( "wpi" );
+		#$path = $conf->get( $pathKey );
+		#if ( !file_exists( $path ) ) {
+		#	$path = __DIR__ . "/../" . $path;
+		#}
+		$path = "/nix/var/nix/profiles/default/bin/" . $pathKey;
 		return $path;
 	}
 
 	private static function setup( $opts ) {
-		self::$gpml2pvjsonPath = self::getPath( "gpml2pvjsonPath" );
-		self::$bridgedbPath = self::getPath( "bridgedbPath" );
-		self::$jqPath = self::getPath( "jqPath" );
+		self::$gpml2pvjsonPath = self::getPath( "gpml2pvjson" );
+		self::$bridgedbPath = self::getPath( "bridgedb" );
+		self::$jqPath = self::getPath( "jq" );
 		self::$organism = escapeshellarg( $opts["organism"] );
 		self::$identifier = escapeshellarg( $opts["identifier"] );
 		self::$version = escapeshellarg( $opts["version"] );
@@ -80,12 +89,19 @@ class Converter {
 		return sprintf(
 			'%s --id %s --pathway-version %s',
 			self::$gpml2pvjsonPath, self::$identifier, self::$version
+		);
+
+/*
+		return sprintf(
+			'%s --id %s --pathway-version %s',
+			self::$gpml2pvjsonPath, self::$identifier, self::$version
 		) . '|' . sprintf(
 			"%s xrefs -f 'json' -i '.entitiesById' %s "
 			. "'.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' "
 			. "ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata",
 			self::$bridgedbPath, self::$organism
 		);
+*/
 	}
 
 	private static function getPvjsonOutput( $gpml, $opts ) {
@@ -128,7 +144,7 @@ class Converter {
 	 * @return string
 	 */
 	public function getPvjson2svg( $pvjson, $opts ) {
-		$pvjsPath = self::getPath( "pvjsPath" );
+		$pvjsPath = self::getPath( "pvjs" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
@@ -146,7 +162,7 @@ class Converter {
 
 		try{
 			$streamPvjsonToSvg = ConvertStream::createStream(
-				"$pvjsPath $reactOpt $themeOpt", [ "timeout" => 10 ]
+				"$pvjsPath json2svg $reactOpt $themeOpt", [ "timeout" => 10 ]
 			);
 			return $streamPvjsonToSvg( $pvjson, true );
 		} catch ( Exception $e ) {
