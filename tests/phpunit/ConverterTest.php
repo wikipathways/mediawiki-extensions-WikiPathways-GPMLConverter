@@ -7,7 +7,7 @@ use WikiPathways\GPML\Converter;
 # TODO: how should we do this properly?
 if ( !function_exists("wfDebugLog") ) {
 	function wfDebugLog( $msg ) {
-		echo $msg;
+		#echo $msg;
 	}
 }
 

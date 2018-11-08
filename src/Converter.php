@@ -75,29 +75,8 @@ class Converter {
 		self::$organism = escapeshellarg( $opts["organism"] );
 		self::$identifier = escapeshellarg( $opts["identifier"] );
 		self::$version = escapeshellarg( $opts["version"] );
-	}
-
-	private static function getToPvjsonCmd( array $opts ) {
-		self::setup( $opts );
-
-		return sprintf(
-			'gpml2pvjson --id %s --pathway-version %s',
-			self::$identifier, self::$version
-		);
-
-/*
-		return sprintf(
-			'gpml2pvjson --id %s --pathway-version %s',
-			self::$identifier, self::$version
-		) . '|' . sprintf(
-			"bridgedb xrefs -f 'json' -i '.entitiesById' %s "
-		) . '|' . sprintf(
-			"bridgedb xrefs -f 'json' -i '.entitiesById' %s "
-			. "'.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' "
-			. "ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata",
-			self::$organism
-		);
 */
+
 	}
 
 	private static function getPvjsonOutput( $gpml, $opts ) {
@@ -149,8 +128,6 @@ class Converter {
 		}
 
 		try{
-			#self::convertWithPathVisio( $input, $output );
-
 			$tmp_in = tempnam(sys_get_temp_dir(), "pathvisio-");
 			$tmp_path_in = $tmp_in . '.gpml';
 			rename($tmp_in, $tmp_path_in);
@@ -190,12 +167,11 @@ class Converter {
 				$result = file_get_contents( $tmp_path_out );
 				unlink($tmp_path_out);
 			} else {
-				echo "The file $tmp_path_out does not exist";
+				wfDebugLog( "The file $tmp_path_out does not exist" );
 			}
 
 			return $result;
 		} catch ( Exception $e ) {
-			var_dump($e->getMessage());
 			wfDebugLog( __METHOD__, "Error converting GPML to $outputFormat:" );
 			wfDebugLog( __METHOD__, $e );
 			wfDebugLog( __METHOD__, "\n" );
@@ -258,10 +234,6 @@ class Converter {
 	 * @return string
 	 */
 	public function getPvjson2svg( $pvjson, $opts ) {
-
-		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
-			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
-			wfDebugLog( __METHOD__, json_encode( $pvjson ) );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
