@@ -14,15 +14,8 @@ Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
 
 2. Install GPMLConverter Dependencies
 
-[Get composer](https://getcomposer.org/) and use it to [install the dependencies](https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies):
 ```sh
-$ php composer.phar install
-```
-
-## How to Update
-If you ever need to update the GPMLConverter dependencies, update `package.json` or `composer.json` and then run [composer update](https://getcomposer.org/doc/01-basic-usage.md#updating-dependencies-to-their-latest-versions):
-``` sh
-$ php composer.phar update
+$ sudo -i bash "$(pwd)/install"
 ```
 
 ## How to Use
@@ -31,7 +24,7 @@ Try converting some data.
 The bare metal version
 ```sh
 $ curl "http://vm1.wikipathways.org/Pathway:WP554?action=raw&oldid=77712" | \
-	./node_modules/.bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 \
+	gpml2pvjson --id http://identifiers.org/wikipathways/WP554 \
 	--pathway-version 77712 > WP554.json
 ```
 

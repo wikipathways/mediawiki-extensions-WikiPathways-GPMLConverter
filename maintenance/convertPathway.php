@@ -27,7 +27,7 @@ $maintPath = $basePath . '/maintenance/Maintenance.php';
 if ( !file_exists( $maintPath ) ) {
 	die ( "Please set the environment variable MW_INSTALL_PATH!" );
 }
-require_once $mainPath;
+require_once $maintPath;
 
 
 class ConvertPathway extends Maintenance {
@@ -36,9 +36,9 @@ class ConvertPathway extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
-		$this->addDexcription( "Convert GPML to another format." );
+		$this->addDescription( "Convert GPML to another format." );
 		$this->addOption( "format", "Format to convert to", true, true, "f" );
-		$this->addOption( "stdout", "Ptint the conversion to stdout", false, false, "s" );
+		$this->addOption( "stdout", "Print the conversion to stdout", false, false, "s" );
 		$this->addOption(
 			"revision", "Revision to use.  Current will be used if not given.", true, false, "r"
 		);

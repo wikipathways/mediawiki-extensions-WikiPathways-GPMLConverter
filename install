@@ -1,0 +1,87 @@
+#! /usr/bin/env bash
+
+set -e
+
+# see https://stackoverflow.com/a/246128/5354298
+get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
+SCRIPT_DIR=$(get_script_dir)
+
+# see https://stackoverflow.com/a/24067243/5354298
+version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+
+# see https://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
+is_installed() { hash $1 2>/dev/null || { false; } }
+exit_if_not_installed() { is_installed $1 || { echo >&2 "I require $1 but it's not installed. Aborting. See https://nixos.org/nix/manual/#sec-prerequisites-source."; exit 1; } }
+function ensure_installed() {
+	if ! is_installed $1 ; then
+		echo "Installing missing dependency $1...";
+		$2;
+	fi
+}
+
+echo "Installing/Updating GPMLConverter"
+
+if [ "$HOME" != '/root' ]; then
+	cat >&2 <<'END_HEREDOC'
+Error: this script must be run as root.
+Please cd to the dir containing this script and run it as:
+  sudo -i bash "$(pwd)/install"
+END_HEREDOC
+	exit;
+fi
+
+cd $HOME; 
+
+if [ $(pwd) != '/root' ]; then
+	cat >&2 <<'END_HEREDOC'
+Error: failed to cd to /root
+END_HEREDOC
+	exit;
+fi
+
+echo "Ensuring dependencies are installed...";
+ensure_installed "nix-env" "bash <(curl https://nixos.org/nix/install)";
+
+# TODO: is this step needed?
+#echo "Ensuring nix up to date...";
+#nix-channel --update
+#nix-collect-garbage -d;
+
+cd $SCRIPT_DIR;
+
+nix-env -f default.nix -i
+
+envvars_path="$SCRIPT_DIR/envvars.gpml-converter";
+rm -f "$envvars_path";
+touch "$envvars_path";
+#for i in bridgedb gpml2pvjson jq pathvisio pvjs; do
+for i in gpml2pvjson jq pathvisio pvjs; do
+	echo "alias $i=\"$(readlink $(which $i))\"" >> "$envvars_path";
+done
+
+echo '';
+echo "Add the following to /var/www/envvars, if not already present:";
+echo ". $envvars_path";
+echo '';
+
+#APACHE_ENV_VARS_PATH="/etc/apache2/envvars";
+#NIX_BIN_PATH_GLOBAL="/root/.nix-profile/bin";
+#if ! cat $APACHE_ENV_VARS_PATH | grep $NIX_BIN_PATH_GLOBAL; then
+#	echo '' >> $APACHE_ENV_VARS_PATH;
+#	echo '# Added to allow WikiPathways to access CLI tools installed via nix.' >> $APACHE_ENV_VARS_PATH;
+#	echo "PATH=\$PATH:$NIX_BIN_PATH_GLOBAL" >> $APACHE_ENV_VARS_PATH;
+#fi
+
+#echo "Creating symlink to browser version of pvjs.js";
+#executable_pvjs_symlink=`which pvjs`;
+#executable_pvjs=`readlink $executable_pvjs_symlink`;
+#executable_pvjs_dir="`dirname $executable_pvjs`/..";
+#browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
+#browser_pvjs_symlink="./modules/pvjs.vanilla.js";
+#rm -f "$browser_pvjs_symlink";
+#ln -s "$browser_pvjs" "$browser_pvjs_symlink";
+#
+#echo "Symlink created:";
+#echo `ls -l $browser_pvjs_symlink`;
+
+echo "Success! GPMLConverter installed/updated."

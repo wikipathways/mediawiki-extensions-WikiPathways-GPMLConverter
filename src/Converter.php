@@ -21,7 +21,6 @@
 namespace WikiPathways\GPML;
 
 use Exception;
-#use GlobalVarConfig;
 
 
 class Converter {
@@ -51,27 +50,11 @@ class Converter {
 		$this->outfh = fopen( $name );
 	}
 
-	private static $gpml2pvjsonPath;
-	private static $bridgedbPath;
-	private static $jqPath;
 	private static $organism;
 	private static $identifier;
 	private static $version;
 
-	private static function getPath( $pathKey ) {
-		#$conf = new GlobalVarConfig( "wpi" );
-		#$path = $conf->get( $pathKey );
-		#if ( !file_exists( $path ) ) {
-		#	$path = __DIR__ . "/../" . $path;
-		#}
-		$path = "/nix/var/nix/profiles/default/bin/" . $pathKey;
-		return $path;
-	}
-
 	private static function setup( $opts ) {
-		self::$gpml2pvjsonPath = self::getPath( "gpml2pvjson" );
-		self::$bridgedbPath = self::getPath( "bridgedb" );
-		self::$jqPath = self::getPath( "jq" );
 		self::$organism = escapeshellarg( $opts["organism"] );
 		self::$identifier = escapeshellarg( $opts["identifier"] );
 		self::$version = escapeshellarg( $opts["version"] );
@@ -81,19 +64,19 @@ class Converter {
 		self::setup( $opts );
 
 		return sprintf(
-			'%s --id %s --pathway-version %s',
-			self::$gpml2pvjsonPath, self::$identifier, self::$version
+			'gpml2pvjson --id %s --pathway-version %s',
+			self::$identifier, self::$version
 		);
 
 /*
 		return sprintf(
-			'%s --id %s --pathway-version %s',
-			self::$gpml2pvjsonPath, self::$identifier, self::$version
+			'gpml2pvjson --id %s --pathway-version %s',
+			self::$identifier, self::$version
 		) . '|' . sprintf(
-			"%s xrefs -f 'json' -i '.entitiesById' %s "
+			"bridgedb xrefs -f 'json' -i '.entitiesById' %s "
 			. "'.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' "
 			. "ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata",
-			self::$bridgedbPath, self::$organism
+			self::$organism
 		);
 */
 	}
@@ -126,10 +109,128 @@ class Converter {
 		try {
 			$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
 		} catch ( Exception $e ) {
-			wfDebugLog( 'GPMLConverer', "Error converting GPML to PVJSON: " . $e->getMessage() );
+			wfDebugLog( 'GPMLConverter', "Error converting GPML to PVJSON: " . $e->getMessage() );
 			return false;
 		}
 		return $rawPvjsonString;
+	}
+
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param string $outputFormat file name extension
+	 * @param integer|null $scale percent of original. Min 100. Only for GPML to PNG.
+	 * @return string
+	 */
+	public function convertWithPathVisio( $input, $outputFormat, $scale = null ) {
+
+		if ( !$input ) {
+			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
+			return false;
+		}
+
+		try{
+			#self::convertWithPathVisio( $input, $output );
+
+			$tmp_in = tempnam(sys_get_temp_dir(), "pathvisio-");
+			$tmp_path_in = $tmp_in . '.gpml';
+			rename($tmp_in, $tmp_path_in);
+			file_put_contents($tmp_path_in, $input);
+
+			$tmp_path_out = $tmp_path_in . "." . $outputFormat;
+
+			$cmd = sprintf(
+				'pathvisio convert %s %s',
+				$tmp_path_in, $tmp_path_out
+			);
+			if (is_int(ctype_digit(strval($scale)))) {
+				$cmd .= ' ' . strval($scale);
+			}
+			$cmd .= ' 2>&1';
+
+			#$msg = exec( $cmd );
+			$last_line = exec( $cmd, $msg, $status );
+
+			if ( $status != 0 ) {
+				throw new MWException(
+					"Unable to convert to $outFormat:\n\nStatus: $status\n\nMessage: $msg\n\n"
+					. "Command: $cmd"
+				);
+				wfDebugLog( __METHOD__,
+					"Unable to convert to $outFormat: Status: $status   Message:$msg  "
+					. "Command: $cmd"
+				);
+			} else {
+				wfDebugLog( __METHOD__, "Convertible: $cmd" );
+			}
+
+			unlink($tmp_path_in);
+
+			$result = '';
+			if (file_exists($tmp_path_out)) {
+				$result = file_get_contents( $tmp_path_out );
+				unlink($tmp_path_out);
+			} else {
+				echo "The file $tmp_path_out does not exist";
+			}
+
+			return $result;
+		} catch ( Exception $e ) {
+			var_dump($e->getMessage());
+			wfDebugLog( __METHOD__, "Error converting GPML to $outputFormat:" );
+			wfDebugLog( __METHOD__, $e );
+			wfDebugLog( __METHOD__, "\n" );
+			return;
+		}
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getGpml2txt( $input, $opts ) {
+		return self::convertWithPathVisio($input, "txt");
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getGpml2png( $input, $opts = [] ) {
+		$scaleOpt = isset( $opts["scale"] )
+				  ? $opts["scale"]
+				  : 100;
+
+		return self::convertWithPathVisio($input, "png", $scaleOpt);
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getGpml2owl( $input, $opts ) {
+		return self::convertWithPathVisio($input, "owl");
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getGpml2pdf( $input, $opts ) {
+		return self::convertWithPathVisio($input, "pdf");
+	}
+
+	/**
+	 * @param string $gpml XML of the gpml
+	 * @param array $opts options
+	 * @return string
+	 */
+	public function getGpml2pwf( $input, $opts ) {
+		return self::convertWithPathVisio($input, "pwf");
 	}
 
 	/**
@@ -138,7 +239,6 @@ class Converter {
 	 * @return string
 	 */
 	public function getPvjson2svg( $pvjson, $opts ) {
-		$pvjsPath = self::getPath( "pvjs" );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
@@ -156,7 +256,7 @@ class Converter {
 
 		try{
 			$streamPvjsonToSvg = ConvertStream::createStream(
-				"$pvjsPath json2svg $reactOpt $themeOpt", [ "timeout" => 10 ]
+				"pvjs $reactOpt $themeOpt", [ "timeout" => 10 ]
 			);
 			return $streamPvjsonToSvg( $pvjson, true );
 		} catch ( Exception $e ) {
