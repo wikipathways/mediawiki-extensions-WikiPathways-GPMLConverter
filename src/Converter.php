@@ -72,6 +72,25 @@ class Converter {
 		return sprintf(
 			'gpml2pvjson --id %s --pathway-version %s',
 			self::$identifier, self::$version
+		self::$organism = escapeshellarg( $opts["organism"] );
+		self::$identifier = escapeshellarg( $opts["identifier"] );
+		self::$version = escapeshellarg( $opts["version"] );
+	}
+
+	private static function getToPvjsonCmd( array $opts ) {
+		self::setup( $opts );
+
+		return sprintf(
+			'gpml2pvjson --id %s --pathway-version %s',
+			self::$identifier, self::$version
+		);
+
+/*
+		return sprintf(
+			'gpml2pvjson --id %s --pathway-version %s',
+			self::$identifier, self::$version
+		) . '|' . sprintf(
+			"bridgedb xrefs -f 'json' -i '.entitiesById' %s "
 		) . '|' . sprintf(
 			"bridgedb xrefs -f 'json' -i '.entitiesById' %s "
 			. "'.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' "
@@ -239,6 +258,10 @@ class Converter {
 	 * @return string
 	 */
 	public function getPvjson2svg( $pvjson, $opts ) {
+
+		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
+			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
+			wfDebugLog( __METHOD__, json_encode( $pvjson ) );
 
 		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
 			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
