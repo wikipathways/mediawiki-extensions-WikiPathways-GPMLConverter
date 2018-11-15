@@ -120,7 +120,10 @@ elif [[ "$ext_out" =~ ^(png)$ ]]; then
   pathvisio convert "$path_in" "$path_out" "$scale"
 elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   organism=$($xmlstarlet sel -N gpml='http://pathvisio.org/GPML/2013a' -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
-  if [ -z "$organism" ]; then
+  # TODO: bridgedbjs fails when no xrefs are present. Update bridgedbjs to do this check:
+  xref_identifiers=$(($xmlstarlet sel -N gpml='http://pathvisio.org/GPML/2013a' -t -v '/gpml:Pathway/gpml:DataNode/gpml:Xref/@ID' "$path_in" | sed '/^$/d') || echo '')
+
+  if [ -z "$organism" ] || [ -z "$xref_identifiers" ]; then
     gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" > "$path_out"
   else
     gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" | \
