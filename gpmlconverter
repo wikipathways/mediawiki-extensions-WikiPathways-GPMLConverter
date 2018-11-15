@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+
+# see https://stackoverflow.com/a/246128/5354298
+get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
+SCRIPT_DIR=$(get_script_dir)
+
+cleanup() {
+  echo "done" > /dev/null
+}
+
+# drawing on https://codeinthehole.com/tips/bash-error-reporting/
+function handle_error {
+  read line file <<<$(caller)
+  echo "An error occurred in line $line of file $file:" >&2
+  sed "${line}q;d" "$file" >&2
+  cleanup
+  exit 1
+}
+
+trap handle_error ERR
+trap cleanup EXIT INT QUIT TERM
+
+TOP_OPTS=$(getopt -o hv: --long help,version:,id:,pathway-version: \
+             -n 'gpmlconverter' -- "$@")
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+# NOTE: keep the quotes
+eval set -- "$TOP_OPTS"
+
+HELP=false
+VERSION=false
+ID=
+PATHWAY_VERSION=
+while true; do
+  case "$1" in
+    -h | --help ) HELP=true; shift ;;
+    -v | --version ) VERSION=true; shift ;;
+    --id ) ID="$2"; shift 2 ;;
+    --pathway-version ) PATHWAY_VERSION="$2"; shift 2 ;;
+    -- ) shift; break ;;
+    * ) break ;;
+  esac
+done
+
+if [ $VERSION == true ]; then
+  # TODO
+  echo "1.0.0"
+  exit 0
+elif [ $HELP == true ]; then
+  echo 'usage: gpmlconverter --version'
+  echo '       gpmlconverter --help'
+  echo '       gpmlconverter [--id] [--pathway-version] <input> [output] [scale=100]'
+  echo '           If no output specified, all supported formats generated, as siblings of input.'
+  echo '           "scale" is only valid for conversions to PNG format.'
+  echo ' '
+  echo 'examples on example data WP1243_69897.gpml:'
+  exit 0
+fi
+
+path_in="$1"
+path_out="$2"
+
+if [ ! -f "$path_in" ]; then
+  echo "Missing file \""$path_in"\"" >&2
+  exit 1
+fi
+
+if [ -f "$path_out" ]; then
+  exit 0
+fi
+
+dir_in=$(dirname "$path_in")
+base_in=$(basename -- "$path_in")
+ext_in="${base_in##*.}"
+stub_in="${base_in%.*}"
+
+if [ -z "$ID" ] || [ -z "$PATHWAY_VERSION" ]; then
+  wp_id="${stub_in%_*}"
+  pathway_version_candidate="${stub_in##*_}"
+  if [ -n "$wp_id" ] && [ -n "$pathway_version_candidate" ]; then
+    ID="http://identifiers.org/wikipathways/$wp_id"
+    PATHWAY_VERSION="$pathway_version_candidate"
+  fi
+fi
+
+# if an output path isn't specified, we'll just convert to all the outputs.
+if [ -z "$path_out" ]; then
+  for format in json owl pdf png pwf react.svg svg txt; do
+    out_f="$dir_in/$stub_in.$format"
+    "$SCRIPT_DIR/gpmlconverter" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$out_f"
+  done
+  exit 0
+fi
+
+dir_out=$(dirname "$path_out")
+base_out=$(basename -- "$path_out")
+ext_out="${base_out##*.}"
+stub_out="${base_out%.*}"
+
+# TODO: don't hardcode this path
+xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
+
+gpml_f="$dir_in/$stub_in.gpml"
+ns=$($xmlstarlet sel -t -v "//namespace::*[name()='']" "$gpml_f" | head -n 1)
+gpml_version="${ns##*/}"
+if [ "$gpml_version" != '2013a' ]; then
+  old_f="$dir_in/$stub_in.$gpml_version.gpml"
+  mv "$gpml_f" "$old_f"
+  pathvisio convert "$old_f" "$gpml_f"
+fi
+
+if [[ "$ext_out" =~ ^(gpml|owl|pdf|pwf|txt)$ ]]; then
+  pathvisio convert "$path_in" "$path_out"
+elif [[ "$ext_out" =~ ^(png)$ ]]; then
+  # TODO: look at using --scale as an option (instead of an argument), for both pathvisio and gpmlconverter.
+  # TODO: move the setting of a default value for scale into pathvisio instead of here.
+  # Setting default value of 100 if none is set
+  scale=${3:-100}
+  pathvisio convert "$path_in" "$path_out" "$scale"
+elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
+  organism=$($xmlstarlet sel -N gpml='http://pathvisio.org/GPML/2013a' -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
+  if [ -z "$organism" ]; then
+    gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" > "$path_out"
+  else
+    gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" | \
+      bridgedb xrefs -f json \
+        -i '.entitiesById' "$organism" '.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' \
+        ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata \
+      > "$path_out"
+  fi
+
+elif [[ "$ext_out" =~ ^(svg)$ ]]; then
+  bare_stub_out="${base_out%%.*}"
+  all_exts_out="${base_out#*.}"
+  second_ext_out="${all_exts_out%.*}"
+
+  json_f="$dir_out/$bare_stub_out.json"
+  "$SCRIPT_DIR/gpmlconverter" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
+
+  if [[ "$base_out" =~ (react.svg)$ ]]; then
+    pvjs --react < "$json_f" > "$path_out"
+  else
+    # TODO: specify actual height and width for stand-alone SVGs in pvjs instead of here
+    pvjs < "$json_f" | \
+      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+      > "$path_out"
+    dark_f="$dir_out/$stub_out.dark.svg"
+    pvjs --theme "dark" < "$json_f" | \
+      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+      > "$dark_f"
+  fi
+else
+  echo "Invalid output extension: \"$ext_out\"" >&2
+  exit 1
+fi
+
+exit 0

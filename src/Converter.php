@@ -113,6 +113,64 @@ class Converter {
 		return $rawPvjsonString;
 	}
 
+	/**
+	 * Convert the given GPML file to another file format.
+	 * The file format will be determined by the
+	 * output file extension.
+	 *
+	 * @param string $gpmlFile source
+	 * @param string $outFile destination
+	 * @param array [$opts] options
+	 * @return bool
+	 */
+	public function convert( $gpmlFile, $outFile, $opts = [] ) {
+		if ( !$gpmlFile ) {
+			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
+			return false;
+		}
+
+		if ( file_exists( $outFile ) ) {
+			return true;
+		}
+
+		/*
+		$scaleOpt = isset( $opts["scale"] )
+				  ? $opts["scale"]
+				  : 100;
+
+		$reactOpt = ( isset( $opts["react"] ) && $opts["react"] == true )
+				  ? " --react"
+				  : "";
+		$themeOpt = ( isset( $opts["theme"] ) && self::$svgThemes[$opts["theme"]] )
+				  ? "--theme " . escapeshellarg( self::$svgThemes[$opts["theme"]] )
+				  : "";
+		*/
+
+		$gpmlFile = realpath( $gpmlFile );
+
+		# TODO: make an alias for the gpmlconverter binary
+		$cmd = sprintf(
+			'/home/wikipathways/extensions/GPMLConverter/gpmlconverter --id %s --pathway-version %s --organism %s %s %s',
+			self::$identifier, self::$version, self::$organism, $gpmlFile, $outFile);
+		#$cmd = " '$gpmlFile' '$outFile' 2>&1";
+
+		wfDebugLog( __METHOD__,  "CONVERTER: $cmd\n" );
+		$msg = wfShellExec( $cmd, $status, [], [ 'memory' => 0 ] );
+		if ( $status != 0 ) {
+			throw new MWException(
+				"Unable to convert to $outFile:\n\nStatus: $status\n\nMessage: $msg\n\n"
+				. "Command: $cmd"
+			);
+			wfDebugLog( __METHOD__,
+				"Unable to convert to $outFile: Status: $status   Message:$msg  "
+				. "Command: $cmd"
+			);
+		} else {
+			wfDebugLog( __METHOD__, "Convertible: $cmd" );
+		}
+		return true;
+	}
+
 
 	/**
 	 * @param string $gpml XML of the gpml
