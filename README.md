@@ -45,15 +45,17 @@ for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.svg'); do
 find /home/wikipathways.org/images/ -name 'WP*.gpml'
 
 rm data/WP*{txt,tsv,json,svg,bpss,owl}; 
-./gpmlconverter --id "http://identifiers.org/wikipathways/WP2722" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
+gpml2 --id "http://identifiers.org/wikipathways/WP2722" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
 
-rm data/WP*{txt,tsv,json,svg,bpss,owl}; ./gpmlconverter --id "http://identifiers.org/wikipathways/WP2722" --pathway-version="93913" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
+rm data/WP*{txt,tsv,json,svg,bpss,owl}; gpml2 --id "http://identifiers.org/wikipathways/WP2722" --pathway-version="93913" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
+
+cd /home/wikipathways.org/extensions/GPMLConverter; nohup ./bulk.sh >bulk.log 2>&1 &
 ```
 
 We are currently adding the id mappings to the JSON, but if we wanted to, we'd also have this option, using the gene list text output:
 ```
    txt_f="$dir_out/$stub_out.txt"
-   ./gpmlconverter "$path_in" "$txt_f"
+   gpml2 "$path_in" "$txt_f"
    mappings_f="$dir_out/$stub_out.idmappings.tsv"
    tail -n +2 "$txt_f" | sort -u | bridgedb xrefs -f "tsv" "Homo sapiens" 1 0 ensembl ncbigene uniprot wikidata > "$mappings_f"
 ```

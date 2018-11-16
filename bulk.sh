@@ -19,8 +19,6 @@ function handle_error {
 
 trap handle_error ERR
 
-    echo "$f" >> "/home/wikipathways.org/invalid-gpml.txt"
-
 xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
 for f in $(find /home/wikipathways.org/images/ -name 'WP*.gpml'); do
   # TODO: which is better?
@@ -29,13 +27,16 @@ for f in $(find /home/wikipathways.org/images/ -name 'WP*.gpml'); do
   is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
   echo "$f"
   if [[ -n "$is_valid" ]]; then
-    sudo -i "$(pwd)/gpmlconverter" "$f";
-   
     dir_f=$(dirname "$f")
     base_f=$(basename -- "$f")
     ext_f="${base_f##*.}"
     stub_f="${base_f%.*}"
     prefix="$dir_f/$stub_f"
+
+    # If you want to convert all:
+    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f";
+    # Convert the minimum required to get svgs:
+    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.svg";
    
     sudo chown www-data:www-data "$prefix".*
     sudo chmod 644 "$prefix".*

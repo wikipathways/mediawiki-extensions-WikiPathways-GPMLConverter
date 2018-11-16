@@ -20,6 +20,7 @@
 
 namespace WikiPathways\GPML;
 
+use MWException;
 use Exception;
 
 
@@ -68,15 +69,6 @@ class Converter {
 			self::$identifier, self::$version
 		);
 
-/*
-		return sprintf(
-			'gpml2pvjson --id %s --pathway-version %s',
-			self::$identifier, self::$version
-		self::$organism = escapeshellarg( $opts["organism"] );
-		self::$identifier = escapeshellarg( $opts["identifier"] );
-		self::$version = escapeshellarg( $opts["version"] );
-*/
-
 	}
 
 	private static function getPvjsonOutput( $gpml, $opts ) {
@@ -85,7 +77,7 @@ class Converter {
 		$streamGpml2Pvjson = ConvertStream::createStream( $toPvjsonCmd, [ "timeout" => 10 ] );
 		if ( !$streamGpml2Pvjson ) {
 			$err = error_get_last();
-			throw new \MWException(
+			throw new MWException(
 				"Error Converting GPML to PVJSON: "
 				. $err["message"] . " (" . $err["file"] . ":" . $err["line"] . ")"
 			);
@@ -118,9 +110,9 @@ class Converter {
 	 * The file format will be determined by the
 	 * output file extension.
 	 *
-	 * @param string $gpmlFile source
-	 * @param string $outFile destination
-	 * @param array [$opts] options
+	 * @param string $gpmlFile path to source
+	 * @param string $outFile path to destination
+	 * @param array $opts=[] options
 	 * @return bool
 	 */
 	public function convert( $gpmlFile, $outFile, $opts = [] ) {
@@ -132,6 +124,8 @@ class Converter {
 		if ( file_exists( $outFile ) ) {
 			return true;
 		}
+
+		self::setup( $opts );
 
 		/*
 		$scaleOpt = isset( $opts["scale"] )
@@ -148,10 +142,10 @@ class Converter {
 
 		$gpmlFile = realpath( $gpmlFile );
 
-		# TODO: make an alias for the gpmlconverter binary
 		$cmd = sprintf(
-			'/home/wikipathways/extensions/GPMLConverter/gpmlconverter --id %s --pathway-version %s --organism %s %s %s',
-			self::$identifier, self::$version, self::$organism, $gpmlFile, $outFile);
+			'gpml2 --id %s --pathway-version %s %s %s',
+			self::$identifier, self::$version, $gpmlFile, $outFile);
+		# TODO: should we be using '2>&1'?
 		#$cmd = " '$gpmlFile' '$outFile' 2>&1";
 
 		wfDebugLog( __METHOD__,  "CONVERTER: $cmd\n" );

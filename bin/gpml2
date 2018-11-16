@@ -21,7 +21,7 @@ trap handle_error ERR
 trap cleanup EXIT INT QUIT TERM
 
 TOP_OPTS=$(getopt -o hv: --long help,version:,id:,pathway-version: \
-             -n 'gpmlconverter' -- "$@")
+             -n 'gpml2' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -48,9 +48,9 @@ if [ $VERSION == true ]; then
   echo "1.0.0"
   exit 0
 elif [ $HELP == true ]; then
-  echo 'usage: gpmlconverter --version'
-  echo '       gpmlconverter --help'
-  echo '       gpmlconverter [--id] [--pathway-version] <input> [output] [scale=100]'
+  echo 'usage: gpml2 --version'
+  echo '       gpml2 --help'
+  echo '       gpml2 [--id] [--pathway-version] <input> [output] [scale=100]'
   echo '           If no output specified, all supported formats generated, as siblings of input.'
   echo '           "scale" is only valid for conversions to PNG format.'
   echo ' '
@@ -88,7 +88,7 @@ fi
 if [ -z "$path_out" ]; then
   for format in json owl pdf png pwf react.svg svg txt; do
     out_f="$dir_in/$stub_in.$format"
-    "$SCRIPT_DIR/gpmlconverter" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$out_f"
+    "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$out_f"
   done
   exit 0
 fi
@@ -113,7 +113,7 @@ fi
 if [[ "$ext_out" =~ ^(gpml|owl|pdf|pwf|txt)$ ]]; then
   pathvisio convert "$path_in" "$path_out"
 elif [[ "$ext_out" =~ ^(png)$ ]]; then
-  # TODO: look at using --scale as an option (instead of an argument), for both pathvisio and gpmlconverter.
+  # TODO: look at using --scale as an option (instead of an argument), for both pathvisio and gpml2.
   # TODO: move the setting of a default value for scale into pathvisio instead of here.
   # Setting default value of 100 if none is set
   scale=${3:-100}
@@ -139,7 +139,7 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
   second_ext_out="${all_exts_out%.*}"
 
   json_f="$dir_out/$bare_stub_out.json"
-  "$SCRIPT_DIR/gpmlconverter" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
+  "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
 
   if [[ "$base_out" =~ (react.svg)$ ]]; then
     pvjs --react < "$json_f" > "$path_out"

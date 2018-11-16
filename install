@@ -1,7 +1,5 @@
 #! /usr/bin/env bash
 
-set -e
-
 # see https://stackoverflow.com/a/246128/5354298
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
@@ -51,13 +49,14 @@ cd $SCRIPT_DIR;
 
 nix-env -f default.nix -i
 
-envvars_path="$SCRIPT_DIR/envvars.gpml-converter";
+envvars_path="$SCRIPT_DIR/envvars";
 rm -f "$envvars_path";
 touch "$envvars_path";
-#for i in bridgedb gpml2pvjson jq pathvisio pvjs; do
-for i in gpml2pvjson jq pathvisio pvjs; do
+for i in bridgedb gpml2pvjson pathvisio pvjs; do
 	echo "alias $i=\"$(readlink $(which $i))\"" >> "$envvars_path";
 done
+echo "alias gpml2=\"$SCRIPT_DIR/bin/gpml2\"" >> "$envvars_path";
+echo "export PATH=\"$SCRIPT_DIR/bin:\$PATH\""
 
 echo '';
 echo "Add the following to /var/www/envvars, if not already present:";
