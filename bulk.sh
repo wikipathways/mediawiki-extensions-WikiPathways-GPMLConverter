@@ -41,8 +41,7 @@ TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
 xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
-#for f in $(find /home/wikipathways.org/images/ -name 'WP*.gpml'); do
-for f in $(find /home/wikipathways.org/images/wikipathways/7/78 -name 'WP*.gpml'); do
+for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
   # TODO: which is better?
   #$xmlstarlet val "$f";
   #if [ $? -eq 0 ]; then ... fi
