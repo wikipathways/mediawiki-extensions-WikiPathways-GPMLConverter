@@ -3,6 +3,7 @@
 # see https://stackoverflow.com/a/246128/5354298
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
+LATEST_GPML_VERSION="2013a"
 
 cleanup() {
   echo "done" > /dev/null
@@ -66,10 +67,6 @@ if [ ! -f "$path_in" ]; then
   exit 1
 fi
 
-if [ -f "$path_out" ]; then
-  exit 0
-fi
-
 dir_in=$(dirname "$path_in")
 base_in=$(basename -- "$path_in")
 ext_in="${base_in##*.}"
@@ -104,7 +101,9 @@ xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xml
 gpml_f="$dir_in/$stub_in.gpml"
 ns=$($xmlstarlet sel -t -v "//namespace::*[name()='']" "$gpml_f" | head -n 1)
 gpml_version="${ns##*/}"
-if [ "$gpml_version" != '2013a' ]; then
+if [ -z "$gpml_version" ]; then
+  exit 1
+elif [ "$gpml_version" != "$LATEST_GPML_VERSION" ]; then
   old_f="$dir_in/$stub_in.$gpml_version.gpml"
   mv "$gpml_f" "$old_f"
   pathvisio convert "$old_f" "$gpml_f"
@@ -119,9 +118,9 @@ elif [[ "$ext_out" =~ ^(png)$ ]]; then
   scale=${3:-100}
   pathvisio convert "$path_in" "$path_out" "$scale"
 elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
-  organism=$($xmlstarlet sel -N gpml='http://pathvisio.org/GPML/2013a' -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
+  organism=$($xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
   # TODO: bridgedbjs fails when no xrefs are present. Update bridgedbjs to do this check:
-  xref_identifiers=$(($xmlstarlet sel -N gpml='http://pathvisio.org/GPML/2013a' -t -v '/gpml:Pathway/gpml:DataNode/gpml:Xref/@ID' "$path_in" | sed '/^$/d') || echo '')
+  xref_identifiers=$(($xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/gpml:DataNode/gpml:Xref/@ID' "$path_in" | sed '/^$/d') || echo '')
 
   if [ -z "$organism" ] || [ -z "$xref_identifiers" ]; then
     gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" > "$path_out"
