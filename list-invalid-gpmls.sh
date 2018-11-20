@@ -7,8 +7,9 @@ SCRIPT_DIR=$(get_script_dir)
 TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
 
 LOG_FILE="$HOME/bulk$TIMESTAMP.log"
-INVALID_GPML_LIST="$HOME/invalid-gpml$TIMESTAMP.txt"
+INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 touch "$LOG_FILE"
+rm -f "$INVALID_GPML_LIST"
 touch "$INVALID_GPML_LIST"
 
 # Based on http://linuxcommand.org/lc3_wss0140.php
@@ -42,11 +43,16 @@ TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
 xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
 for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
-  # TODO: which is better?
-  #$xmlstarlet val "$f";
-  #if [ $? -eq 0 ]; then ... fi
-  is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
-  if [ ! "$is_valid" ]; then
-    echo "$f" >> "$INVALID_GPML_LIST"
+  if [ -s "$f" ]; then
+    # TODO: which is better?
+    #$xmlstarlet val "$f";
+    #if [ $? -eq 0 ]; then ... fi
+    is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
+    if [ ! "$is_valid" ]; then
+      echo "$f" >> "$INVALID_GPML_LIST"
+    fi
+  else
+    echo "Removing empty file: $f"
+    sudo rm -f "$f"
   fi
 done

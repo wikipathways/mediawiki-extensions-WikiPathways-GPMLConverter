@@ -4,12 +4,11 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
-TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
+INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 
+TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
 LOG_FILE="$HOME/bulk$TIMESTAMP.log"
-INVALID_GPML_LIST="$HOME/invalid-gpml$TIMESTAMP.txt"
 touch "$LOG_FILE"
-touch "$INVALID_GPML_LIST"
 
 cleanup() {
   echo "done" > /dev/null
@@ -36,52 +35,39 @@ error_exit() {
   exit 1
 }
 
-## drawing on https://codeinthehole.com/tips/bash-error-reporting/
-#function handle_error {
-#  read line file <<<$(caller)
-#  (echo "An error occurred in line $line of file $file:" | tee -a "$LOG_FILE" >&2)
-#  (sed "${line}q;d" "$file" | tee -a "$LOG_FILE" >&2)
-#  exit 1
-#}
-#
-#trap handle_error ERR
-
 trap error_exit ERR
 # TODO what about the following?
 # SIGHUP SIGINT SIGTERM
+trap cleanup EXIT INT QUIT TERM
 
 TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
 xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
-for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
-  # TODO: which is better?
-  #$xmlstarlet val "$f";
-  #if [ $? -eq 0 ]; then ... fi
-  is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
-  echo '' | tee -a "$LOG_FILE"
-  echo '------------------------------------------------' | tee -a "$LOG_FILE"
-  echo "$f" | tee -a "$LOG_FILE"
-  if [[ -n "$is_valid" ]]; then
-    dir_f=$(dirname "$f")
-    base_f=$(basename -- "$f")
-    ext_f="${base_f##*.}"
-    stub_f="${base_f%.*}"
-    prefix="$dir_f/$stub_f"
 
-    if [[ $TARGET_FORMAT == '*' ]]; then
-      # If you want to convert all:
-      sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
-    else
-      # Convert the minimum required to get svgs:
-      sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2> >(tee -a "$LOG_FILE" >&2);
-    fi
-   
-    sudo chown www-data:www-data "$prefix".*
-    sudo chmod 644 "$prefix".*
+for f in $(sort <(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml') <(cat "$INVALID_GPML_LIST") | uniq -u); do
+  #echo '' | tee -a "$LOG_FILE"
+  #echo '------------------------------------------------' | tee -a "$LOG_FILE"
+  echo "$f" | tee -a "$LOG_FILE"
+
+  dir_f=$(dirname "$f")
+  base_f=$(basename -- "$f")
+  ext_f="${base_f##*.}"
+  stub_f="${base_f%.*}"
+  prefix="$dir_f/$stub_f"
+
+  # TODO: how do we want to pipe to stdout and to log file(s)?
+  if [[ $TARGET_FORMAT == '*' ]]; then
+    # Convert to all supported formats:
+    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2>> "$LOG_FILE";
   else
-    echo "  Warning: invalid GPML" | tee -a "$LOG_FILE"
-    echo " "
-    echo "$f" >> "$INVALID_GPML_LIST"
+    # Convert only as needed to get SVGs:
+    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2>> "$LOG_FILE";
   fi
+ 
+  # Make file permissions match what normal conversion would generate
+  sudo chown www-data:www-data "$prefix".*
+  sudo chmod 644 "$prefix".*
 done
