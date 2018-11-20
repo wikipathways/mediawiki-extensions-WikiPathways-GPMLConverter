@@ -11,10 +11,14 @@ INVALID_GPML_LIST="$HOME/invalid-gpml$TIMESTAMP.txt"
 touch "$LOG_FILE"
 touch "$INVALID_GPML_LIST"
 
+cleanup() {
+  echo "done" > /dev/null
+}
+
 # Based on http://linuxcommand.org/lc3_wss0140.php
+# and https://codeinthehole.com/tips/bash-error-reporting/
 PROGNAME=$(basename $0)
-error_exit()
-{
+error_exit() {
 
 #	----------------------------------------------------------------
 #	Function for exit due to fatal program error
@@ -23,19 +27,28 @@ error_exit()
 #	----------------------------------------------------------------
 
 
-	echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
-	exit 1
-}
+  echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
 
-# drawing on https://codeinthehole.com/tips/bash-error-reporting/
-function handle_error {
   read line file <<<$(caller)
-  (echo "An error occurred in line $line of file $file:" | tee -a "$LOG_FILE" >&2)
-  (sed "${line}q;d" "$file" | tee -a "$LOG_FILE" >&2)
+  echo "An error occurred in line $line of file $file:" 1>&2
+  sed "${line}q;d" "$file" 1>&2
+  cleanup
   exit 1
 }
 
-trap handle_error ERR
+## drawing on https://codeinthehole.com/tips/bash-error-reporting/
+#function handle_error {
+#  read line file <<<$(caller)
+#  (echo "An error occurred in line $line of file $file:" | tee -a "$LOG_FILE" >&2)
+#  (sed "${line}q;d" "$file" | tee -a "$LOG_FILE" >&2)
+#  exit 1
+#}
+#
+#trap handle_error ERR
+
+trap error_exit ERR
+# TODO what about the following?
+# SIGHUP SIGINT SIGTERM
 
 TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
