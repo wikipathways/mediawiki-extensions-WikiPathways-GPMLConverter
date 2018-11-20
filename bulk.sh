@@ -5,6 +5,7 @@ get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
 INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
+UNCONVERTIBLE_GPML_LIST="$HOME/unconvertible-gpmls.txt"
 
 TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
 LOG_FILE="$HOME/bulk$TIMESTAMP.log"
@@ -45,7 +46,7 @@ TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
 xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
 
-for f in $(sort <(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml') <(cat "$INVALID_GPML_LIST") | uniq -u); do
+for f in $(sort <(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml') <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST") | uniq -u); do
   #echo '' | tee -a "$LOG_FILE"
   #echo '------------------------------------------------' | tee -a "$LOG_FILE"
   echo "$f" | tee -a "$LOG_FILE"
