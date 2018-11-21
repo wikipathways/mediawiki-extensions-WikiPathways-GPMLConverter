@@ -38,13 +38,12 @@ function handle_error {
 
 trap handle_error ERR
 
-xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
 for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
   if [ -s "$f" ]; then
     # TODO: which is better?
-    #$xmlstarlet val "$f";
+    #xmlstarlet val "$f";
     #if [ $? -eq 0 ]; then ... fi
-    is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
+    is_valid=$((xmlstarlet val "$f" | grep ' valid') || echo '');
     if [ ! "$is_valid" ]; then
       echo "$f" >> "$INVALID_GPML_LIST"
     fi

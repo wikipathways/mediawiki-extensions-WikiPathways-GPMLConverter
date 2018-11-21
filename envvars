@@ -1,7 +1,1 @@
-alias gpml2pvjson="/nix/store/871x8ima81qgcxhpbnkpjgqyvk92irf0-node-gpml2pvjson-4.1.1/bin/gpml2pvjson"
-alias jq="/nix/store/jg6nl5m37z779rs5fw7zd9gvzysys2bs-jq-1.5-bin/bin/jq"
-alias pathvisio="/nix/store/x3vz45zi70jvwmslid5rxiqprnj0ghw6-PathVisio-3.3.0-Homo_sapiens/bin/pathvisio"
-alias pvjs="/nix/store/4ipmjdyjif8qs18l88an4swq27sqyir6-node-_at_wikipathways_slash_pvjs-4.0.4/bin/pvjs"
-alias gpml2="/home/wikipathways.org/extensions/GPMLConverter/bin/gpml2"
-
-export PATH="/home/wikipathways.org/extensions/GPMLConverter/bin:$PATH"
+export PATH="/home/wikipathways.org/extensions/GPMLConverter/bin:/nix/var/nix/profiles/default/bin:$PATH"

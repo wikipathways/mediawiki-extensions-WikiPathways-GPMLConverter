@@ -67,3 +67,25 @@ bridgedb xrefs -f "tsv" --headers=true -i 3 \
 	ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata \
 	< ./WP269_91030.txt
 ```
+
+sudo mount -o bind /home/wikipathways/nix /nix
+sudo umount /nix
+
+sudo systemctl stop nix-daemon.service; sudo systemctl stop nix-daemon.socket;
+sudo systemctl start nix-daemon.socket; sudo systemctl start nix-daemon.service
+
+sudo systemctl stop nix-daemon.socket
+sudo systemctl stop nix-daemon.service
+sudo systemctl disable nix-daemon.socket
+sudo systemctl disable nix-daemon.service
+sudo systemctl daemon-reload
+
+sudo mount -o bind /home/wikipathways/nix /nix
+
+sudo systemctl enable nix-daemon.service
+sudo systemctl enable nix-daemon.socket
+sudo systemctl start nix-daemon.service
+sudo systemctl start nix-daemon.socket
+sudo systemctl daemon-reload
+
+nix-env -f non-node-deps.nix -i

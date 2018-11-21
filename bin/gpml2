@@ -131,20 +131,17 @@ base_out=$(basename -- "$path_out")
 ext_out="${base_out##*.}"
 stub_out="${base_out%.*}"
 
-# TODO: don't hardcode this path
-xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
-
 gpml_f="$dir_in/$stub_in.gpml"
 
 # TODO: which is better?
-#$xmlstarlet val "$f";
+#xmlstarlet val "$f";
 #if [ $? -eq 0 ]; then ... fi
-is_valid=$(($xmlstarlet val "$gpml_f" | grep ' valid') || echo '');
+is_valid=$((xmlstarlet val "$gpml_f" | grep ' valid') || echo '');
 if [ ! "$is_valid" ]; then
   error_exit "Error: Invalid GPML for $gpml_f"
 fi
 
-ns=$($xmlstarlet sel -t -v "//namespace::*[name()='']" "$gpml_f" | head -n 1)
+ns=$(xmlstarlet sel -t -v "//namespace::*[name()='']" "$gpml_f" | head -n 1)
 gpml_version="${ns##*/}"
 if [ -z "$gpml_version" ]; then
   error_exit "Error: GPML namespace missing. Expecting '$LATEST_GPML_VERSION'"
@@ -163,9 +160,9 @@ elif [[ "$ext_out" =~ ^(png)$ ]]; then
   scale=${3:-100}
   pathvisio convert "$path_in" "$path_out" "$scale"
 elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
-  organism=$($xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
+  organism=$(xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
   # TODO: bridgedbjs fails when no xrefs are present. Update bridgedbjs to do this check:
-  xref_identifiers=$(($xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/gpml:DataNode/gpml:Xref/@ID' "$path_in" | sed '/^$/d') || echo '')
+  xref_identifiers=$((xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/gpml:DataNode/gpml:Xref/@ID' "$path_in" | sed '/^$/d') || echo '')
 
   if [ -z "$organism" ] || [ -z "$xref_identifiers" ]; then
     gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" > "$path_out"
@@ -190,13 +187,13 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
   else
     # TODO: specify actual height and width for stand-alone SVGs in pvjs instead of here
     pvjs < "$json_f" | \
-      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
-      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
       > "$path_out"
     dark_f="$dir_out/$stub_out.dark.svg"
     pvjs --theme "dark" < "$json_f" | \
-      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
-      "$xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
       > "$dark_f"
   fi
 else

@@ -45,8 +45,6 @@ trap cleanup EXIT INT QUIT TERM
 TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
-xmlstarlet='/nix/store/dwigzvk3yrbai9mxh3k2maqsghfjqgr6-xmlstarlet-1.6.1/bin/xmlstarlet'
-
 # Convert all GPML files that we can
 for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
   #echo '' | tee -a "$LOG_FILE"
