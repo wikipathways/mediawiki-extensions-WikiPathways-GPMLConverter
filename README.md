@@ -59,3 +59,11 @@ We are currently adding the id mappings to the JSON, but if we wanted to, we'd a
    mappings_f="$dir_out/$stub_out.idmappings.tsv"
    tail -n +2 "$txt_f" | sort -u | bridgedb xrefs -f "tsv" "Homo sapiens" 1 0 ensembl ncbigene uniprot wikidata > "$mappings_f"
 ```
+
+```
+pathvisio convert /home/wikipathways.org/images/wikipathways/1/1f/WP269_91030.gpml WP269_91030.txt 
+bridgedb xrefs -f "tsv" --headers=true -i 3 \
+	"Drosophila melanogaster" "Database" "Identifier" \
+	ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata \
+	< ./WP269_91030.txt
+```
