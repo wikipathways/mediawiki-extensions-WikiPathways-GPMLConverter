@@ -7,10 +7,15 @@ SCRIPT_DIR=$(get_script_dir)
 TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
 
 LOG_FILE="$HOME/bulk$TIMESTAMP.log"
-INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 touch "$LOG_FILE"
+
+INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 rm -f "$INVALID_GPML_LIST"
 touch "$INVALID_GPML_LIST"
+
+CONVERTED_GPML_LIST="$HOME/converted-gpmls.txt"
+rm -f "$CONVERTED_GPML_LIST"
+touch "$CONVERTED_GPML_LIST"
 
 # Based on http://linuxcommand.org/lc3_wss0140.php
 PROGNAME=$(basename $0)
@@ -46,7 +51,23 @@ for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); d
     #if [ $? -eq 0 ]; then ... fi
     is_valid=$(($xmlstarlet val "$f" | grep ' valid') || echo '');
     if [ ! "$is_valid" ]; then
-      echo "$f" >> "$INVALID_GPML_LIST"
+      if ! grep "$f" "$INVALID_GPML_LIST"; then
+        echo "$f" >> "$INVALID_GPML_LIST"
+      fi
+    else
+      dir_f=$(dirname "$f")
+      base_f=$(basename -- "$f")
+      ext_f="${base_f##*.}"
+      stub_f="${base_f%.*}"
+      prefix="$dir_f/$stub_f"
+      svg_f="$prefix.svg"
+
+      if [ -s "$svg_f" ]; then
+        echo "$f" >> "$CONVERTED_GPML_LIST"
+      elif [ -f "$svg_f" ]; then
+        echo "Removing empty file: $svg_f"
+	sudo rm -f "$svg_f"
+      fi
     fi
   else
     echo "Removing empty file: $f"
