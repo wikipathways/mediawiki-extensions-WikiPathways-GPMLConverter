@@ -14,3 +14,6 @@ nix-store --export $(nix-store -qR $(nix-instantiate "$SCRIPT_DIR/default.nix"))
 #done
 
 tar --remove-files -jcf "$gpmlconverter_f.tar.bz2" "$gpmlconverter_f"
+
+# Then put that file on Dropbox. Get it onto a local machine with this command:
+#scp -o ProxyCommand='ssh 10.1.101.113 nc vm1.wikipathways.org 22' vm1.wikipathways.org:/home/wikipathways.org/extensions/GPMLConverter/gpmlconverter.tar.bz2 ./gpmlconverter.tar.bz2

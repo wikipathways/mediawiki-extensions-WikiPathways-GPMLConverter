@@ -18,6 +18,24 @@ Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
 $ sudo -i bash "$(pwd)/install"
 ```
 
+### Troubleshooting
+
+#### Not enough space
+
+On the VM for vm1.wikipathways.org, not enough space was allocated for `/nix`.
+To get around this problem, I had to take these steps before installing:
+
+```
+sudo mount -o bind /home/wikipathways/nix /nix
+```
+
+Comment out lines of 327 to 335 of file `nix-2.1.3-x86_64-linux/install-multi-user`
+and then install Nix.
+
+#### Too many files open
+
+After installing Nix, try running `bash ./import.sh` instead of `nix-env -f default -i`.
+
 ## How to Use
 Try converting some data.
 
@@ -39,55 +57,3 @@ or another format:
 $ php maintenance/convertPathway.php -o SVG -r 77712 WP554
 An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored at WP554.svg
 ```
-
-```
-for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.svg'); do sudo rm -f "$f"; done
-find /home/wikipathways.org/images/ -name 'WP*.gpml'
-
-rm data/WP*{txt,tsv,json,svg,bpss,owl}; 
-gpml2 --id "http://identifiers.org/wikipathways/WP2722" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
-
-rm data/WP*{txt,tsv,json,svg,bpss,owl}; gpml2 --id "http://identifiers.org/wikipathways/WP2722" --pathway-version="93913" /home/wikipathways.org/images/wikipathways/a/a1/WP2722_93913.gpml data/WP2722_93913.svg
-
-cd /home/wikipathways.org/extensions/GPMLConverter; nohup ./bulk.sh >bulk.log 2>&1 &
-```
-
-We are currently adding the id mappings to the JSON, but if we wanted to, we'd also have this option, using the gene list text output:
-```
-   txt_f="$dir_out/$stub_out.txt"
-   gpml2 "$path_in" "$txt_f"
-   mappings_f="$dir_out/$stub_out.idmappings.tsv"
-   tail -n +2 "$txt_f" | sort -u | bridgedb xrefs -f "tsv" "Homo sapiens" 1 0 ensembl ncbigene uniprot wikidata > "$mappings_f"
-```
-
-```
-pathvisio convert /home/wikipathways.org/images/wikipathways/1/1f/WP269_91030.gpml WP269_91030.txt 
-bridgedb xrefs -f "tsv" --headers=true -i 3 \
-	"Drosophila melanogaster" "Database" "Identifier" \
-	ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata \
-	< ./WP269_91030.txt
-```
-
-sudo mount -o bind /home/wikipathways/nix /nix
-sudo umount /nix
-
-sudo systemctl stop nix-daemon.service; sudo systemctl stop nix-daemon.socket;
-sudo systemctl start nix-daemon.socket; sudo systemctl start nix-daemon.service
-
-sudo systemctl stop nix-daemon.socket
-sudo systemctl stop nix-daemon.service
-sudo systemctl disable nix-daemon.socket
-sudo systemctl disable nix-daemon.service
-sudo systemctl daemon-reload
-
-sudo mount -o bind /home/wikipathways/nix /nix
-
-sudo systemctl enable nix-daemon.service
-sudo systemctl enable nix-daemon.socket
-sudo systemctl start nix-daemon.service
-sudo systemctl start nix-daemon.socket
-sudo systemctl daemon-reload
-
-nix-env -f non-node-deps.nix -i
-
-scp -o ProxyCommand='ssh 10.1.101.113 nc vm1.wikipathways.org 22' vm1.wikipathways.org:/home/wikipathways.org/extensions/GPMLConverter/gpmlconverter.tar.bz2 ./gpmlconverter.tar.bz2
