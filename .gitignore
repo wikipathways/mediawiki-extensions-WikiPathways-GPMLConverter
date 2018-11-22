@@ -1,8 +1,4 @@
-default.nix
-node-env.nix
-node-packages.nix
 pvjs.js
+envvars
 vendor
-package-lock.json
 composer.lock
-node_modules

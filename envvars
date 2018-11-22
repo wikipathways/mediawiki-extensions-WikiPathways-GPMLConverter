@@ -1,1 +1,0 @@
-export PATH="/home/wikipathways.org/extensions/GPMLConverter/bin:/nix/var/nix/profiles/default/bin:$PATH"
