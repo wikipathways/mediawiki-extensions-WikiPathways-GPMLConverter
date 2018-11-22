@@ -89,3 +89,5 @@ sudo systemctl start nix-daemon.socket
 sudo systemctl daemon-reload
 
 nix-env -f non-node-deps.nix -i
+
+scp -o ProxyCommand='ssh 10.1.101.113 nc vm1.wikipathways.org 22' vm1.wikipathways.org:/home/wikipathways.org/extensions/GPMLConverter/gpmlconverter.tar.bz2 ./gpmlconverter.tar.bz2

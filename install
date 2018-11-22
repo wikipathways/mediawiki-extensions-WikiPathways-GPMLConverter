@@ -31,8 +31,10 @@ envvars_path="$SCRIPT_DIR/envvars";
 echo "export PATH=\"$SCRIPT_DIR/bin:/nix/var/nix/profiles/default/bin:\$PATH\"" > "$envvars_path";
 
 echo '';
-echo "Add the following to /etc/apache2/envvars, if not already present:";
+echo "Add the following line to /etc/apache2/envvars, if not already present:";
 echo ". $envvars_path";
+echo "Then restart Apache:";
+echo "sudo apachectl restart";
 echo '';
 
 #APACHE_ENV_VARS_PATH="/etc/apache2/envvars";
