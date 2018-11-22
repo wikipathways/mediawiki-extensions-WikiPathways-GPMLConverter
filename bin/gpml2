@@ -169,7 +169,7 @@ elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   else
     gpml2pvjson --id "$ID" --pathway-version "$PATHWAY_VERSION" < "$path_in" | \
       bridgedb xrefs -f json \
-        -i '.entitiesById' "$organism" '.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' \
+        -i '.entitiesById[].type' "$organism" '.entitiesById[].xrefDataSource' '.entitiesById[].xrefIdentifier' \
         ensembl hgnc.symbol ncbigene uniprot hmdb chebi wikidata \
       > "$path_out"
   fi
