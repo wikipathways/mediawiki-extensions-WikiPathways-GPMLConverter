@@ -159,6 +159,10 @@ elif [[ "$ext_out" =~ ^(png)$ ]]; then
   # Setting default value of 100 if none is set
   scale=${3:-100}
   pathvisio convert "$path_in" "$path_out" "$scale"
+  # Use interlacing? See https://github.com/PathVisio/pathvisio/issues/78
+  # It's probably not worthwhile. If we did it, we would need to install imagemagick and then run this:
+  # mv "$path_out" "$path_out.noninterlaced.png"
+  # convert -interlace PNG "$path_out.noninterlaced.png" "$path_out"
 elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   organism=$(xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
   # TODO: bridgedbjs fails when no xrefs are present. Update bridgedbjs to do this check:
@@ -182,20 +186,195 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
   json_f="$dir_out/$bare_stub_out.json"
   "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
 
-  if [[ "$base_out" =~ (react.svg)$ ]]; then
-    pvjs --react < "$json_f" > "$path_out"
-  else
-    # TODO: specify actual height and width for stand-alone SVGs in pvjs instead of here
-    pvjs < "$json_f" | \
-      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
-      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
-      > "$path_out"
-    dark_f="$dir_out/$stub_out.dark.svg"
-    pvjs --theme "dark" < "$json_f" | \
-      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
-      "xmlstarlet" ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
-      > "$dark_f"
-  fi
+#  if [[ "$base_out" =~ (react.svg)$ ]]; then
+#    pvjs --react < "$json_f" > "$path_out"
+#  else
+  pvjs --react < "$json_f" > "$path_out"
+
+  # TODO: specify actual height and width for stand-alone SVGs in pvjs instead of here
+  # TODO: make the stand-alone SVGs work for upload to WM Commons:
+  # https://www.mediawiki.org/wiki/Manual:Coding_conventions/SVG
+  # https://commons.wikimedia.org/wiki/Help:SVG
+  # https://commons.wikimedia.org/wiki/Commons:Commons_SVG_Checker?withJS=MediaWiki:CommonsSvgChecker.js
+  # http://validator.w3.org/#validate_by_upload+with_options
+  standalone_f="$dir_out/$stub_out.standalone.svg"
+  #pvjs < "$json_f" | \
+  pvjs < "$json_f" | \
+    xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+    xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+    > "$standalone_f"
+
+  edge_count=$(cat "$standalone_f" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])')
+
+  for i in $(seq $edge_count); do
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-m "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][$i]/svg:g/svg:path" \
+		"/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][$i]" \
+		"$standalone_f";
+  done
+
+  for attr in "filter" "fill" "fill-opacity" "stroke" "stroke-dasharray" "stroke-width"; do
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+              -i "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]" -t attr -n "$attr" -v "REPLACE_ME" \
+		-u "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/@$attr" \
+		    -x "string(../svg:g/@$attr)" \
+		 "$standalone_f"
+  done
+
+  for attr in "color" "fill" "fill-opacity" "stroke" "stroke-dasharray" "stroke-width"; do
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+              -i "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/svg:path" -t attr -n "$attr" -v "REPLACE_ME" \
+		-u "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/svg:path/@$attr" \
+		    -x "string(../../svg:g/@$attr)" \
+		 "$standalone_f"
+  done
+
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+              -d "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/svg:g" \
+	      -d "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/svg:path/@style" \
+	      "$standalone_f"
+
+  # Which of the following is correct?
+  # To make the SVG file independent of Arial, change all occurrences of
+  #   font-family: Arial to font-family: 'Liberation Sans', Arial, sans-serif
+  #   https://commons.wikimedia.org/wiki/Help:SVG#fallback
+  # vs.
+  # Phab:T64987, Phab:T184369, Gnome #95; font-family="'font name'"
+  #   (internally quoted font family name) does not work
+  #   (File:Mathematical_implication_diagram-alt.svg, File:T184369.svg)
+  #   https://commons.wikimedia.org/wiki/Commons:Commons_SVG_Checker?withJS=MediaWiki:CommonsSvgChecker.js
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "//*[contains(@font-family,'Arial')]/@font-family" \
+		    -v "sans-serif" \
+		 "$standalone_f"
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "//*[contains(@font-family,'arial')]/@font-family" \
+		    -v "sans-serif" \
+		 "$standalone_f"
+
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+              -i "/svg:svg/svg:defs/svg:g/svg:svg/svg:defs/svg:marker/svg:path[not(@fill)]" -t attr -n "fill" -v "REPLACE_ME" \
+	      -u "/svg:svg/svg:defs/svg:g/svg:svg/svg:defs/svg:marker/svg:path[@fill='REPLACE_ME']/@fill" \
+		    -v "currentColor" \
+		 "$standalone_f"
+
+# see https://www.reddit.com/r/bash/comments/8ucx8a/can_you_use_bash_scripting_to_calculate_the/
+invert_color() {
+  color="$1"
+
+  case "$color" in
+        none)
+            echo 'none'
+            ;;
+         
+        transparent)
+            echo 'transparent'
+            ;;
+         
+        black)
+            echo 'white'
+            ;;
+         
+        white)
+            echo 'black'
+            ;;
+         
+        *)
+  	    printf -v color '#%06X' $((0x${color#\#} ^ 0xFFFFFF))
+	    echo "$color"
+  esac
+}
+
+invert_filter() {
+  from_color=$(echo "$1" | sed 's/^url[(]#kaavio\(.*\)to\(.*\)filter[)]$/\1/')
+  to_color=$(echo "$1" | sed 's/^url[(]#kaavio\(.*\)to\(.*\)filter[)]$/\2/')
+  inverted_from_color=$(invert_color $from_color)
+  #inverted_to_color=$(invert_color $to_color)
+  echo "url(#kaavio"$inverted_from_color"to"$to_color"filter)"
+}
+
+#PRETTY_CSS='<![CDATA['$(cat "$SCRIPT_DIR/../pretty.css")']]>'
+PRETTY_CSS=$(< "$SCRIPT_DIR/../pretty.css")
+
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/@color" \
+  		-v "white" \
+		"$standalone_f";
+
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/@color" \
+  		-v "white" \
+		-u "/svg:svg/svg:g/@color" \
+  		-v "white" \
+		-u "/svg:svg/svg:style/text()" \
+  		-v "$PRETTY_CSS" \
+		"$standalone_f";
+
+		# TODO: how to add a newline?
+  		#-v "$'\n'${PRETTY_CSS}$'\n'" \
+  		#-v '<![CDATA['"$PRETTY_CSS"']]>' \
+
+  # TODO: State? Burr? Group?
+  for x in "DataNode" "CellularComponent" "Shape" "Label" "Group"; do
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/svg:g//svg:g[contains(@typeof,'$x')]/svg:rect[contains(@class,'Icon')]/@class" \
+  		-x "concat(.,' ','$x','-Icon')" \
+		"$standalone_f";
+
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/svg:g//svg:g[contains(@typeof,'$x')]/svg:use[contains(@class,'Icon')]/@class" \
+  		-x "concat(.,' ','$x','-Icon')" \
+		"$standalone_f";
+  done
+
+  # TODO: rsvg cannot handle child CSS selectors. How to handle?
+  # https://phabricator.wikimedia.org/T43423
+  # Note: it appears at least some versions can handle inheriting style _attributes_
+  # https://gitlab.gnome.org/GNOME/librsvg/issues/181
+
+  for attr in "color" "fill" "stroke"; do
+    #echo "attr: $attr"
+    el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@$attr])" "$standalone_f")
+    #echo "el_count: $el_count";
+    for i in $(seq $el_count); do
+      #echo "i: $i of $el_count";
+      color=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" "$standalone_f");
+      #echo "color: $color";
+      inverted_color=$(invert_color $color)
+      #echo "inverted_color: $inverted_color"
+      xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+  		-u "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" \
+  		-v $inverted_color \
+  		"$standalone_f";
+
+  		#-v "DUMMY" \
+
+    done
+  done
+
+  el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@filter])" "$standalone_f")
+  #echo "el_count: $el_count";
+  for i in $(seq $el_count); do
+    #echo "i: $i of $el_count";
+    filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$standalone_f");
+    #echo "color: $color";
+    inverted_filter_value=$(invert_filter $filter_value)
+    #echo "inverted_color: $inverted_color"
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "(/svg:svg/svg:g//*[@filter])[$i]/@filter" \
+		-v $inverted_filter_value \
+		"$standalone_f";
+
+  		#-v "DUMMY" \
+  done
+
+# filter="url(#kaavioblackto00cc66filter)"
+
+#  dark_f="$dir_out/$stub_out.dark.svg"
+#  pvjs --theme "dark" < "$json_f" | \
+#    xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n width -v '800px' | \
+#    xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i '/svg:svg' --type attr -n height -v '600px' \
+#    > "$dark_f"
 else
   error_exit "Invalid output extension: '$ext_out'"
 fi

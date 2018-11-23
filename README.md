@@ -57,3 +57,31 @@ or another format:
 $ php maintenance/convertPathway.php -o SVG -r 77712 WP554
 An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored at WP554.svg
 ```
+
+```
+ssh -o ProxyCommand='ssh 10.1.101.113 nc vm1.wikipathways.org 22' vm1.wikipathways.org -t 'cd /home/wikipathways.org/extensions/GPMLConverter; bash -l'
+```
+
+```
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i "//svg:g" -t attr -n "fill" -v "g" -u '//svg:g[contains(@typeof,'Edge')]/@fill' -v 'when' WP2868_98142.svg; echo ''
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -u '//svg:g[contains(@typeof,'Edge')]/svg:g/@fill' --expr "string(../svg:path/@class)" WP2868_98142.svg; echo ''
+
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]" -t attr -n "fill" -v "g" -u '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]/@fill' -x "string(../svg:g/@fill)" WP2868_98142.svg; echo ''
+
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '//svg:g[contains(@typeof,'Edge')]/svg:g//svg:path' "svg:svg" WP2868_98142.svg; echo ''
+
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '//svg:g[contains(@typeof,'Edge')]/svg:g//svg:path' "node()" WP2868_98142.svg; echo ''
+
+https://tw.saowen.com/a/8d7b95b1b078da209f45dc5e6211b79157d759417511baeaf2bf8623599e7d91
+
+xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]/@class' WP2868_98142.svg; echo ''
+
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]/svg:g/svg:path' "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]" WP2868_98142.svg; echo ''
+
+xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])' WP2868_98142.svg; echo ''
+
+for 
+xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]/svg:g/svg:path' "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]" WP2868_98142.svg; echo ''
+
+rm wow.*; ./bin/gpml2 /home/wikipathways.org/images/wikipathways/a/a4/WP2868_98142.gpml wow.svg
+```
