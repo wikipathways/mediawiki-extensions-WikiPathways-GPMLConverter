@@ -159,6 +159,10 @@ elif [[ "$ext_out" =~ ^(png)$ ]]; then
   # Setting default value of 100 if none is set
   scale=${3:-100}
   pathvisio convert "$path_in" "$path_out" "$scale"
+  # Use interlacing? See https://github.com/PathVisio/pathvisio/issues/78
+  # It's probably not worthwhile. If we did it, we would need to install imagemagick and then run this:
+  # mv "$path_out" "$path_out.noninterlaced.png"
+  # convert -interlace PNG "$path_out.noninterlaced.png" "$path_out"
 elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   organism=$(xmlstarlet sel -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" -t -v '/gpml:Pathway/@Organism' "$path_in" || echo '')
   # TODO: bridgedbjs fails when no xrefs are present. Update bridgedbjs to do this check:
@@ -289,12 +293,26 @@ invert_filter() {
   echo "url(#kaavio"$inverted_from_color"to"$to_color"filter)"
 }
 
+#PRETTY_CSS='<![CDATA['$(cat "$SCRIPT_DIR/../pretty.css")']]>'
+PRETTY_CSS=$(< "$SCRIPT_DIR/../pretty.css")
+
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/@color" \
+  		-v "white" \
+		"$standalone_f";
+
   xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
 		-u "/svg:svg/@color" \
   		-v "white" \
 		-u "/svg:svg/svg:g/@color" \
   		-v "white" \
+		-u "/svg:svg/svg:style/text()" \
+  		-v "$PRETTY_CSS" \
 		"$standalone_f";
+
+		# TODO: how to add a newline?
+  		#-v "$'\n'${PRETTY_CSS}$'\n'" \
+  		#-v '<![CDATA['"$PRETTY_CSS"']]>' \
 
   # TODO: State? Burr? Group?
   for x in "DataNode" "CellularComponent" "Shape" "Label" "Group"; do
@@ -309,7 +327,10 @@ invert_filter() {
 		"$standalone_f";
   done
 
-  # TODO: handle case where lib-rsvg cannot handle child CSS selectors
+  # TODO: rsvg cannot handle child CSS selectors. How to handle?
+  # https://phabricator.wikimedia.org/T43423
+  # Note: it appears at least some versions can handle inheriting style _attributes_
+  # https://gitlab.gnome.org/GNOME/librsvg/issues/181
 
   for attr in "color" "fill" "stroke"; do
     #echo "attr: $attr"

@@ -58,6 +58,11 @@ $ php maintenance/convertPathway.php -o SVG -r 77712 WP554
 An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored at WP554.svg
 ```
 
+```
+ssh -o ProxyCommand='ssh 10.1.101.113 nc vm1.wikipathways.org 22' vm1.wikipathways.org -t 'cd /home/wikipathways.org/extensions/GPMLConverter; bash -l'
+```
+
+```
 xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -i "//svg:g" -t attr -n "fill" -v "g" -u '//svg:g[contains(@typeof,'Edge')]/@fill' -v 'when' WP2868_98142.svg; echo ''
 xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -u '//svg:g[contains(@typeof,'Edge')]/svg:g/@fill' --expr "string(../svg:path/@class)" WP2868_98142.svg; echo ''
 
@@ -79,3 +84,4 @@ for
 xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]/svg:g/svg:path' "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]" WP2868_98142.svg; echo ''
 
 rm wow.*; ./bin/gpml2 /home/wikipathways.org/images/wikipathways/a/a4/WP2868_98142.gpml wow.svg
+```
