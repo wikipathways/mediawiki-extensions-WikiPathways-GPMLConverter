@@ -385,12 +385,28 @@ invert_filter() {
 		-v "0px" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Text')]/@font-weight" \
 		-v "bold" \
-		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Icon')]/@fill" \
-		-v "blue" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'GeneProduct')]/*[contains(@class,'Icon')]/@fill" \
 		-v "#f4d03f" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'GeneProduct')]/*[contains(@class,'Text')]/@fill" \
+		-v "#333" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Protein')]/*[contains(@class,'Icon')]/@fill" \
-		-v "yellow" \
+		-v "brown" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Protein')]/*[contains(@class,'Text')]/@fill" \
+		-v "#FEFEFE" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Rna')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#9453A7" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Rna')]/*[contains(@class,'Text')]/@fill" \
+		-v "#ECF0F1" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#75C95C" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Text')]/@fill" \
+		-v "#1C2833" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#0000EE" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Text')]/@fill" \
+		-v "#FEFEFE" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#33BFFF" \
 		"$standalone_f"
 
 # filter="url(#kaavioblackto00cc66filter)"
