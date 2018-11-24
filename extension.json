@@ -8,5 +8,8 @@
 	"description": "Extension that captures the nodejs converter's integration into MediaWiki.",
 	"license-name": "Apache-2.0",
 	"type": "other",
+	"AutoloadClasses": {
+		"WikiPathways\\GPML\\Converter": "src/Converter.php"
+	},
 	"manifest_version": 1
 }
