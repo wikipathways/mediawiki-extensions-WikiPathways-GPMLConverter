@@ -313,15 +313,19 @@ invert_filter() {
 
   # TODO: push the text down based on font size. Add some value to the existing transform="translate(40,10)"
   # so maybe for a font size of 10, we'd add 5 to get transform="translate(40,15)"
-#  el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//svg:text)" "$standalone_f")
-#  for i in $(seq $el_count); do
-#    filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$standalone_f");
-#    inverted_filter_value=$(invert_filter $filter_value)
-#    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
-#		  -u "(/svg:svg/svg:g//*[@filter])[$i]/@filter" \
-#		  -v $inverted_filter_value \
-#		  "$standalone_f";
-#  done
+  el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//svg:text)" "$standalone_f")
+  for i in $(seq $el_count); do
+    font_size=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@font-size" "$standalone_f" | sed 's/^\([0-9.]*\)px$/\1/g');
+  from_color=$(echo "$1" | sed 's/^url[(]#kaavio\(.*\)to\(.*\)filter[)]$/\1/')
+    font_size=${font_size:-5}
+    x_translation=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@transform" "$standalone_f" | sed 's/^translate[(]\([0-9.]*\),\([0-9.]*\)[)]$/\1/g');
+    y_translation=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@transform" "$standalone_f" | sed 's/^translate[(]\([0-9.]*\),\([0-9.]*\)[)]$/\2/g');
+    updated_y_translation=$(echo "$font_size / 3 + $y_translation" | bc)
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		  -u "(/svg:svg/svg:g//svg:text)[$i]/@transform" \
+		  -v "translate($x_translation,$updated_y_translation)" \
+		  "$standalone_f";
+  done
 
 #  # TODO: State? Burr? Group?
 #  for x in "DataNode" "CellularComponent" "Shape" "Label" "Group"; do
@@ -371,6 +375,23 @@ invert_filter() {
 
   		#-v "DUMMY" \
   done
+
+  # clip-path needed because rx and ry don't work in FF or Safari
+  xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+                -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "clip-path" -v "url(#ClipPathRoundedRectangle)" \
+                -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "rx" -v "15px" \
+                -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "ry" -v "15px" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]/@stroke-width" \
+		-v "0px" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Text')]/@font-weight" \
+		-v "bold" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Icon')]/@fill" \
+		-v "blue" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'GeneProduct')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#f4d03f" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Protein')]/*[contains(@class,'Icon')]/@fill" \
+		-v "yellow" \
+		"$standalone_f"
 
 # filter="url(#kaavioblackto00cc66filter)"
 
