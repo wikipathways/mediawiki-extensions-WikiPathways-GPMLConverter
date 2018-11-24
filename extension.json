@@ -1,0 +1,12 @@
+{
+	"name": "GPML Converter",
+	"version": "0.01",
+	"author": [
+		"Anders Ruitta"
+	],
+	"url": "https://www.wikipathways.org",
+	"description": "Extension that captures the nodejs converter's integration into MediaWiki.",
+	"license-name": "Apache-2.0",
+	"type": "other",
+	"manifest_version": 1
+}
