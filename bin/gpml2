@@ -304,12 +304,17 @@ invert_filter() {
   		-v "white" \
 		-u "/svg:svg/svg:g/@color" \
   		-v "white" \
+		-u "/svg:svg/svg:g//svg:text[@stroke-width='0.05px']/@stroke-width" \
+  		-v "0px" \
 		-d "/svg:svg/svg:style" \
                 -d "/svg:svg/svg:g//*/svg:text/@overflow" \
                 -d "/svg:svg/svg:g//*/svg:text/@dominant-baseline" \
                 -d "/svg:svg/svg:g//*/svg:text/@clip-path" \
                 -d "/svg:svg/svg:g//svg:defs" \
+		-d "/svg:svg/svg:g//svg:text[@stroke-width='0.05px']/@stroke-width" \
 		"$standalone_f";
+
+		#-d "/svg:svg/svg:g//svg:text[@stroke-width='0.05px']/@stroke-width" \
 
   # TODO: push the text down based on font size. Add some value to the existing transform="translate(40,10)"
   # so maybe for a font size of 10, we'd add 5 to get transform="translate(40,15)"
@@ -318,6 +323,7 @@ invert_filter() {
     font_size=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@font-size" "$standalone_f" | sed 's/^\([0-9.]*\)px$/\1/g');
   from_color=$(echo "$1" | sed 's/^url[(]#kaavio\(.*\)to\(.*\)filter[)]$/\1/')
     font_size=${font_size:-5}
+    #updated_font_size=$(echo "($font_size * 1.05 + 0.5)/1" | bc)
     x_translation=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@transform" "$standalone_f" | sed 's/^translate[(]\([0-9.]*\),\([0-9.]*\)[)]$/\1/g');
     y_translation=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@transform" "$standalone_f" | sed 's/^translate[(]\([0-9.]*\),\([0-9.]*\)[)]$/\2/g');
     updated_y_translation=$(echo "$font_size / 3 + $y_translation" | bc)
@@ -325,6 +331,8 @@ invert_filter() {
 		  -u "(/svg:svg/svg:g//svg:text)[$i]/@transform" \
 		  -v "translate($x_translation,$updated_y_translation)" \
 		  "$standalone_f";
+#		  -u "(/svg:svg/svg:g//svg:text)[$i]/@font-size" \
+#		  -v "${updated_font_size}px" \
   done
 
 #  # TODO: State? Burr? Group?
@@ -341,43 +349,71 @@ invert_filter() {
 #  done
 
   for attr in "color" "fill" "stroke"; do
-    #echo "attr: $attr"
     el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@$attr])" "$standalone_f")
-    #echo "el_count: $el_count";
     for i in $(seq $el_count); do
-      #echo "i: $i of $el_count";
       color=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" "$standalone_f");
-      #echo "color: $color";
       inverted_color=$(invert_color $color)
-      #echo "inverted_color: $inverted_color"
       xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
   		    -u "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" \
 		    -v $inverted_color \
 		    "$standalone_f";
-
-  		#-v "DUMMY" \
-
     done
   done
 
   el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@filter])" "$standalone_f")
-  #echo "el_count: $el_count";
   for i in $(seq $el_count); do
-    #echo "i: $i of $el_count";
     filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$standalone_f");
-    #echo "color: $color";
     inverted_filter_value=$(invert_filter $filter_value)
-    #echo "inverted_color: $inverted_color"
     xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
 		  -u "(/svg:svg/svg:g//*[@filter])[$i]/@filter" \
 		  -v $inverted_filter_value \
 		  "$standalone_f";
-
-  		#-v "DUMMY" \
   done
 
   # clip-path needed because rx and ry don't work in FF or Safari
   xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+		-u "/svg:svg/svg:g/svg:rect[contains(@class,'Icon')]/@fill" \
+		-v "#3d3d3d" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'Edge')]/svg:path/@stroke-width" \
+		-v "1.1px" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupGroup')]/*[contains(@class,'Icon')]/@fill" \
+		-v "transparent" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupGroup')]/*[contains(@class,'Icon')]/@stroke-width" \
+		-v "0px" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupComplex')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#B4B464" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupComplex')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "0.1" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupComplex')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "#808080" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupNone')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#B4B464" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupNone')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "0.1" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupNone')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "#808080" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupPathway')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#008000" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupPathway')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "0.05" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'GroupPathway')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "#808080" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'CellularComponent')]/*[contains(@class,'Icon')]/@color" \
+		-v "red" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'CellularComponent')]/*[contains(@class,'Icon')]/@fill" \
+		-v "pink" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'CellularComponent')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "0.05" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'CellularComponent')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "orange" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'Label')]/*[contains(@class,'Icon')]/@color" \
+		-v "transparent" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'Label')]/*[contains(@class,'Icon')]/@fill" \
+		-v "none" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'Label')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "0" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'Label')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "none" \
                 -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "clip-path" -v "url(#ClipPathRoundedRectangle)" \
                 -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "rx" -v "15px" \
                 -i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/*[contains(@class,'Icon')]" -t attr -n "ry" -v "15px" \
@@ -397,16 +433,33 @@ invert_filter() {
 		-v "#9453A7" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Rna')]/*[contains(@class,'Text')]/@fill" \
 		-v "#ECF0F1" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Icon')]/@xlink:href" \
+		-v "#Rectangle" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Icon')]/@fill" \
 		-v "#75C95C" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Icon')]/@fill-opacity" \
+		-v "1" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Text')]/@stroke" \
+		-v "transparent" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Text')]/@stroke-width" \
+		-v "0px" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Pathway')]/*[contains(@class,'Text')]/@fill" \
 		-v "#1C2833" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Icon')]/@fill" \
 		-v "#0000EE" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'Metabolite')]/*[contains(@class,'Text')]/@fill" \
 		-v "#FEFEFE" \
-		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode') and contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@fill" \
-		-v "#33BFFF" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@fill" \
+		-v "#fefefe" \
+		-i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]" \
+		-t attr -n "color" \
+		-v "#b0b0b0" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@stroke" \
+		-v "#b0b0b0" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@stroke-width" \
+		-v "0.5px" \
+		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Text')]/@fill" \
+		-v "black" \
 		"$standalone_f"
 
 # filter="url(#kaavioblackto00cc66filter)"
