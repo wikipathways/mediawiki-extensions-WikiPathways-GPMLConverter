@@ -210,6 +210,31 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
                   -i '/svg:svg' --type attr -n height -v '600px' \
     > "$standalone_f"
 
+  for metabolite_data in $(jq -c '.entitiesById[] | select(.type | contains(["Metabolite"])) | {xrefDataSource, xrefIdentifier, type}' "$json_f"); do
+    data_source=$(echo $metabolite_data | jq -r .xrefDataSource);
+    identifier=$(echo $metabolite_data | jq -r .xrefIdentifier);
+    wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
+    smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
+    cdkdepict="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
+
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+                  -s "/svg:svg/svg:defs/svg:g[@id='jic-defs']/svg:svg/svg:defs" -t elem -n "pattern" -v "" \
+    		  --var prevpattern '$prev' \
+                  -s '$prevpattern' -t elem -n "image" -v "" \
+    		  --var previmage '$prev' \
+                  -i '$prevpattern' -t attr -n "id" -v "Pattern$wikidata_identifier" \
+                  -i '$prevpattern' -t attr -n "width" -v "100%" \
+                  -i '$prevpattern' -t attr -n "height" -v "100%" \
+                  -i '$prevpattern' -t attr -n "patternContentUnits" -v "objectBoundingBox" \
+                  -i '$prevpattern' -t attr -n "preserveAspectRatio" -v "xMidYMid" \
+                  -i '$prevpattern' -t attr -n "viewBox" -v "0 0 1 1" \
+                  -i '$previmage' -t attr -n "width" -v "1" \
+                  -i '$previmage' -t attr -n "height" -v "1" \
+                  -i '$previmage' -t attr -n "href" -v "$cdkdepict" \
+                  -i '$previmage' -t attr -n "preserveAspectRatio" -v "xMidYMid" \
+		  "$standalone_f"
+  done
+
   edge_count=$(cat "$standalone_f" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])')
 
   for i in $(seq $edge_count); do
@@ -249,13 +274,26 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
   #   (internally quoted font family name) does not work
   #   (File:Mathematical_implication_diagram-alt.svg, File:T184369.svg)
   #   https://commons.wikimedia.org/wiki/Commons:Commons_SVG_Checker?withJS=MediaWiki:CommonsSvgChecker.js
+
+  # The kerning for Liberation Sans has some issues, at least when run through librsvg.
+  # Liberation Sans is the open replacement for Arial, but DejaVu Sans with transform="scale(0.92,0.98)"
+  # might have better kerning while taking up about the same amount of space.
+
+  # Long-term, should we switch our default font from Arial to something prettier?
+  # It would have to be a well-supported font.
+  # This page <https://commons.wikimedia.org/wiki/Help:SVG#fallback> says:
+  #     On Commons, librsvg has the fonts listed in:
+  #     https://meta.wikimedia.org/wiki/SVG_fonts#Latin_(basic)_fonts_comparison
+  #     ...
+  #     In graphic illustrations metric exact text elements are often important
+  #     and Arial can be seen as de-facto standard for such a feature.
   xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
 		-u "//*[contains(@font-family,'Arial')]/@font-family" \
-		-v "Liberation Sans, sans-serif" \
+		-v "'Liberation Sans', Arial, sans-serif" \
 		 "$standalone_f"
   xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
 		-u "//*[contains(@font-family,'arial')]/@font-family" \
-		-v "Liberation Sans, sans-serif" \
+		-v "'Liberation Sans', Arial, sans-serif" \
 		"$standalone_f"
 
   xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
@@ -347,6 +385,9 @@ invert_filter() {
 #  		-x "concat(.,' ','$x','-Icon')" \
 #		"$standalone_f";
 #  done
+
+  # TODO: how about using these: https://reactome.org/icon-lib
+  # for example, mitochondrion: https://reactome.org/icon-lib?f=cell_elements#Mitochondrion.svg
 
   for attr in "color" "fill" "stroke"; do
     el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@$attr])" "$standalone_f")
@@ -453,11 +494,11 @@ invert_filter() {
 		-v "#fefefe" \
 		-i "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]" \
 		-t attr -n "color" \
-		-v "#b0b0b0" \
+		-v "gray" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@stroke" \
-		-v "#b0b0b0" \
+		-v "gray" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Icon')]/@stroke-width" \
-		-v "0.5px" \
+		-v "1px" \
 		-u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Text')]/@fill" \
 		-v "black" \
 		"$standalone_f"
