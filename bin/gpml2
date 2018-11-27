@@ -222,7 +222,7 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
     cdkdepict="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
 
 # TODO: do we want to disable the clip-path on hover?
-#[typeof~=wikidata:$wikidata_identifier].DataNode.Metabolite:hover .Icon {
+#[typeof~=wikidata:$wikidata_identifier]:hover > .Icon {
 #  clip-path: unset;
 #  rx: unset;
 #  ry: unset;
@@ -238,14 +238,14 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
     xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
 		  -u "/svg:svg/svg:style/text()" \
   		  -x "concat(., '
-[typeof~=wikidata:$wikidata_identifier].DataNode.Metabolite:hover .Icon {
+[typeof~=wikidata:$wikidata_identifier]:hover > .Icon {
   cursor: default;
   fill: url(#Pattern$wikidata_identifier);
   transform-box: fill-box;
   transform: scale(2, 3);
   transform-origin: 50% 50%;
 }
-[typeof~=wikidata:$wikidata_identifier].DataNode.Metabolite:hover .Text {
+[typeof~=wikidata:$wikidata_identifier]:hover > .Text {
   font-size: 0px;
 }
 ')" \
@@ -266,11 +266,12 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
 		  "$standalone_f"
   done
 
-  # TODO: I can't figure out how to avoid the quotes being escaped when I put
-  # them in via xmlstarlet like this or many other variations:
-  # [typeof~=\"wikidata:$wikidata_identifier\"].DataNode.Metabolite:hover .Icon {
+  # TODO: I can't figure out how to avoid the quotes and greater than signs
+  # being escaped when I insert them into the SVG XML via xmlstarlet.
+  # I tried this and many other variations:
+  # [typeof~=\"wikidata:$wikidata_identifier\"]:hover > .Icon {
   # So I'm fixing it with sed. This is a kludge.
-  sed -i 's/\(typeof~\)=\(wikidata:Q[0-9]*\)\(\]\.DataNode\)/\1="\2"\3/g' "$standalone_f"
+  sed -i 's/\(typeof~\)=\(wikidata:Q[0-9]*\)\(\]\:hover\)\ \&\(amp;\)*gt;/\1="\2"\3 >/g' "$standalone_f"
 
   edge_count=$(cat "$standalone_f" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])')
 
