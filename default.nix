@@ -22,4 +22,5 @@ in [
 
   pkgs.coreutils
   pkgs.xmlstarlet
+  pkgs.bc
 ] ++ (if stdenv.isDarwin then [] else [])
