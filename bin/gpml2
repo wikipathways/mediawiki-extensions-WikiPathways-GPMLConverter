@@ -242,20 +242,28 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
 
     # TODO: get rid of the dummy patterns from pvjs instead of removing them here
     xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
-  		  -u "/svg:svg/svg:style/text()" \
-  		  -v "
-" \
                   -d "//svg:pattern[@id='PatternQ47512']" \
                   -d "//svg:pattern[@id='PatternQ193166']" \
                   -d "//svg:pattern[@id='PatternQ213580']" \
                   -d "//svg:pattern[@id='PatternQ715317']" \
 		  "$path_out"
 
+    add_metabolite_patterns "$json_f" "$path_out"
+
+    # We overwrite the stylesheet, getting rid of the hover effects
+    # for metabolites, but that's desired for now.
+    # We have the patterns in case we want to do anything with
+    # them later on, but we don't have the busy hover effects.
+    xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
+  		  -u "/svg:svg/svg:style/text()" \
+  		  -v "
+" \
+		  "$path_out"
+
     sed -i '/<style.*>/{
 r '"$SCRIPT_DIR/../dark.css"'
 }' "$path_out"
 
-    add_metabolite_patterns "$json_f" "$path_out"
   else
     # TODO: make the stand-alone SVGs work for upload to WM Commons:
     # https://www.mediawiki.org/wiki/Manual:Coding_conventions/SVG

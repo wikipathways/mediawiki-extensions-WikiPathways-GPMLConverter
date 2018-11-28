@@ -120,15 +120,15 @@ for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Met
   smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
   cdkdepict="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
   
-  cat > "$css_out" <<EOF
-[typeof~=wikidata:$wikidata_identifier]:hover > .Icon {
+  cat >> "$css_out" <<EOF
+[typeof~="wikidata:$wikidata_identifier"]:hover > .Icon {
   cursor: default;
   fill: url(#Pattern$wikidata_identifier);
   transform-box: fill-box;
   transform: scale(2, 3);
   transform-origin: 50% 50%;
 }
-[typeof~=wikidata:$wikidata_identifier]:hover > .Text {
+[typeof~="wikidata:$wikidata_identifier"]:hover > .Text {
   font-size: 0px;
 }
 EOF
