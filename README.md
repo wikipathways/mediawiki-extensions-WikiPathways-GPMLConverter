@@ -18,6 +18,12 @@ Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
 $ sudo -i bash "$(pwd)/install"
 ```
 
+### Install for Development
+
+```sh
+$ git clone --recurse-submodules git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
+```
+
 ### Troubleshooting
 
 #### Not enough space
