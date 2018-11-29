@@ -59,6 +59,33 @@ r /dev/stdin
 }' "$svg_in" < <(xmlstarlet sel -t -c '/svg/defs/*' "$metabolite_patterns_svg_f")
 }
 
+# TODO: fix these in pvjs instead of here
+fix_pvjs_bugs() {
+  svg_in="$1"
+
+  xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
+                -d "//svg:pattern[@id='PatternQ47512']" \
+		-d "//svg:pattern[@id='PatternQ193166']" \
+		-d "//svg:pattern[@id='PatternQ213580']" \
+		-d "//svg:pattern[@id='PatternQ715317']" \
+		-i '/svg:svg' -t attr -n "vocab" \
+		-v 'http://vocabularies.wikipathways.org/wp#' \
+		-u "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]//svg:path/@id" \
+		-x "concat(., '-path')" \
+		"$svg_in"
+
+#  edge_count=$(cat "$svg_in" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])')
+#  for i in $(seq $edge_count); do
+#      xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+#		    -u "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][$i]//svg:path/@id" \
+#		    -x "concat(., '-path')" \
+#		    "$svg_in";
+#		    #-x "concat(string(../@id), '-path')" \
+#  done
+}
+
+
+
 # see https://www.reddit.com/r/bash/comments/8ucx8a/can_you_use_bash_scripting_to_calculate_the/
 invert_color() {
   color="$1"
@@ -171,6 +198,9 @@ if [ -z "$path_out" ]; then
   done
 
   exit 0
+elif [ -e "$path_out" ]; then
+  echo "$path_out already converted. To overwrite, delete it and call gpml2 again."
+  exit 0
 fi
 
 dir_out=$(dirname "$path_out")
@@ -226,6 +256,12 @@ elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   fi
 
 elif [[ "$ext_out" =~ ^(svg)$ ]]; then
+  # TODO: check outputs against these tools:
+  # https://search.google.com/structured-data/testing-tool
+  # https://webmaster.yandex.com/tools/microtest/
+  # http://linter.structured-data.org/
+  #
+  # See https://github.com/w3c/microdata/issues/10
   bare_stub_out="${base_out%%.*}"
   all_exts_out="${base_out#*.}"
   second_ext_out="${all_exts_out%.*}"
@@ -240,13 +276,7 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
     # is giving an error. Strangely, "xmlstarlet fo" does not error.
     #pvjs --react --theme "dark" < "$json_f" | xmlstarlet fo -o > "$path_out"
 
-    # TODO: get rid of the dummy patterns from pvjs instead of removing them here
-    xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
-                  -d "//svg:pattern[@id='PatternQ47512']" \
-                  -d "//svg:pattern[@id='PatternQ193166']" \
-                  -d "//svg:pattern[@id='PatternQ213580']" \
-                  -d "//svg:pattern[@id='PatternQ715317']" \
-		  "$path_out"
+    fix_pvjs_bugs "$path_out"
 
     add_metabolite_patterns "$json_f" "$path_out"
 
@@ -269,6 +299,7 @@ r '"$SCRIPT_DIR/../dark.css"'
     # https://www.mediawiki.org/wiki/Manual:Coding_conventions/SVG
     # https://commons.wikimedia.org/wiki/Help:SVG
     # https://commons.wikimedia.org/wiki/Commons:Commons_SVG_Checker?withJS=MediaWiki:CommonsSvgChecker.js
+    # The W3 validator might be outdated. It doesn't allow for RDFa attributes.
     # http://validator.w3.org/#validate_by_upload+with_options
   
   
@@ -277,7 +308,6 @@ r '"$SCRIPT_DIR/../dark.css"'
     #           them a good close-up view"
     # https://commons.wikimedia.org/wiki/Help:SVG#Frequently_asked_questions
   
-    # TODO: get rid of the dummy patterns from pvjs instead of removing them here
     pvjs < "$json_f" | \
       xmlstarlet ed -N svg='http://www.w3.org/2000/svg' \
                     -i '/svg:svg' --type attr -n width -v '800px' \
@@ -285,12 +315,10 @@ r '"$SCRIPT_DIR/../dark.css"'
   		    -u "/svg:svg/svg:style/text()" \
   		    -v "
 " \
-                    -d "//svg:pattern[@id='PatternQ47512']" \
-		    -d "//svg:pattern[@id='PatternQ193166']" \
-		    -d "//svg:pattern[@id='PatternQ213580']" \
-		    -d "//svg:pattern[@id='PatternQ715317']" \
       > "$path_out"
   
+    fix_pvjs_bugs "$path_out"
+
     add_metabolite_patterns "$json_f" "$path_out"
 
     edge_count=$(cat "$path_out" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')])')
@@ -373,9 +401,8 @@ r '"$SCRIPT_DIR/../dark.css"'
 		  -d "/svg:svg/svg:g//svg:text[@stroke-width='0.05px']/@stroke-width" \
 		  "$path_out";
   
-    # TODO: push the text down based on font size. Add some value to the existing transform="translate(40,10)"
-    # so maybe for a font size of 10, we'd add 5 to get transform="translate(40,15)"
-    # This is needed because librsvg can't handle alignment-baseline.
+    # We are pushing the text down based on font size.
+    # This is needed because librsvg doesn't support attribute "alignment-baseline".
     el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//svg:text)" "$path_out")
     for i in $(seq $el_count); do
       font_size=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//svg:text)[$i]/@font-size" "$path_out" | sed 's/^\([0-9.]*\)px$/\1/g');
