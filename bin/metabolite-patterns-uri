@@ -68,6 +68,7 @@ elif [ $HELP == true ]; then
 fi
 
 json_f="$1"
+#dir_out="$2"
 
 if [ ! -f "$json_f" ]; then
   error_exit "Missing file '"$json_f"'"
@@ -102,19 +103,6 @@ for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Met
   wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
   smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
   cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
-  cdkdepict_out="$dir_out/$identifier.cdkdepict.svg"
-
-  if [ ! -e "$cdkdepict_out" ]; then
-    curl -L --get \
-       --data-urlencode "smi=$smiles" \
-       --data-urlencode 'abbr=on' \
-       --data-urlencode 'hdisp=bridgehead' \
-       --data-urlencode 'showtitle=false' \
-       --data-urlencode 'zoom=1.0' \
-       --data-urlencode 'annotate=none' \
-      'http://www.simolecule.com/cdkdepict/depict/bow/svg' \
-    > "$cdkdepict_out"
-  fi
   
   cat >> "$css_out" <<EOF
 [typeof~="wikidata:$wikidata_identifier"]:hover > .Icon {
@@ -157,37 +145,23 @@ EOF
   #  "transform-box: fill-box" is needed for FF.
   #  https://bugzilla.mozilla.org/show_bug.cgi?id=1209061
 
-  cdkdepict_viewBox=$(cat "$cdkdepict_out" | xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v '/svg:svg/@viewBox')
-  cdkdepict_viewBox=${cdkdepict_viewBox:-'0 0 100% 100%'}
-
   xmlstarlet ed -L \
                     -s "/svg/defs" -t elem -n "pattern" -v "" \
       		    --var prevpattern '$prev' \
+                    -s '$prevpattern' -t elem -n "image" -v "" \
+      		    --var previmage '$prev' \
                     -i '$prevpattern' -t attr -n "id" -v "Pattern$wikidata_identifier" \
                     -i '$prevpattern' -t attr -n "width" -v "100%" \
                     -i '$prevpattern' -t attr -n "height" -v "100%" \
                     -i '$prevpattern' -t attr -n "patternContentUnits" -v "objectBoundingBox" \
                     -i '$prevpattern' -t attr -n "preserveAspectRatio" -v "none" \
-                    -i '$prevpattern' -t attr -n "viewBox" -v "$cdkdepict_viewBox" \
-		    -s '$prevpattern' -t text -n text  \
-		    -v "
-METABOLITE_PATTERN_CONTENT_PLACEHOLDER
-" \
+                    -i '$prevpattern' -t attr -n "viewBox" -v "0 0 1 1" \
+                    -i '$previmage' -t attr -n "width" -v "1" \
+                    -i '$previmage' -t attr -n "height" -v "1" \
+                    -i '$previmage' -t attr -n "href" -v "$cdkdepict_url" \
+                    -i '$previmage' -t attr -n "preserveAspectRatio" -v "none" \
   		  "$svg_out"
 
-  #sed -i '/<pattern id="Pattern$wikidata_identifier">/{
-
-  # TODO: don't include xmlns="..." in pattern content
-  sed -i '/METABOLITE_PATTERN_CONTENT_PLACEHOLDER/{
-r /dev/stdin
-d
-}' "$svg_out" < <(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' \
-                  -t -c '/svg:svg/svg:g' "$cdkdepict_out")
-
 done
-
-# TODO: isn't there a better way to remove unneeded xmlns stuff?
-# I tried xmlstarlet fo -o -N, but it didn't seem to do what's needed.
-sed -i 's|g\ xmlns="http://www.w3.org/2000/svg"\ xmlns:xlink="http://www.w3.org/1999/xlink"|g|g' "$svg_out"
-
+ 
 exit 0

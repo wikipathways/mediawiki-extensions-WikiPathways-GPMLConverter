@@ -57,6 +57,7 @@ r '"$metabolite_patterns_css_f"'
   sed -i '/<g id="jic-defs">/{
 r /dev/stdin
 }' "$svg_in" < <(xmlstarlet sel -t -c '/svg/defs/*' "$metabolite_patterns_svg_f")
+
 }
 
 # TODO: fix these in pvjs instead of here
@@ -328,7 +329,13 @@ r '"$SCRIPT_DIR/../dark.css"'
 		    "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][$i]" \
 		    "$path_out";
     done
-  
+
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+  		  -m "/svg:svg/svg:defs/svg:g[@id='jic-defs']/svg:svg/svg:defs/*" \
+		     "/svg:svg/svg:defs/svg:g[@id='jic-defs']" \
+  		  -d "/svg:svg/svg:defs/svg:g[@id='jic-defs']/svg:svg" \
+		  "$path_out";
+
     for attr in "filter" "fill" "fill-opacity" "stroke" "stroke-dasharray" "stroke-width"; do
       xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
                     -i "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')]" -t attr -n "$attr" -v "REPLACE_ME" \
@@ -382,8 +389,8 @@ r '"$SCRIPT_DIR/../dark.css"'
 		  "$path_out"
   
     xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
-                  -i "/svg:svg/svg:defs/svg:g/svg:svg/svg:defs/svg:marker/svg:path[not(@fill)]" -t attr -n "fill" -v "REPLACE_ME" \
-		  -u "/svg:svg/svg:defs/svg:g/svg:svg/svg:defs/svg:marker/svg:path[@fill='REPLACE_ME']/@fill" \
+                  -i "/svg:svg/svg:defs/svg:g/svg:marker/svg:path[not(@fill)]" -t attr -n "fill" -v "REPLACE_ME" \
+		  -u "/svg:svg/svg:defs/svg:g/svg:marker/svg:path[@fill='REPLACE_ME']/@fill" \
 		  -v "currentColor" \
 		  "$path_out"
  
