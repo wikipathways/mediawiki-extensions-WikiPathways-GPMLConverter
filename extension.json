@@ -1,15 +1,32 @@
 {
-	"name": "GPML Converter",
+	"name": "GPMLConverter",
 	"version": "0.01",
 	"author": [
-		"Anders Ruitta"
+		"[https://wikipathways.org WikiPathways team]"
 	],
 	"url": "https://www.wikipathways.org",
-	"description": "Extension that captures the nodejs converter's integration into MediaWiki.",
+	"descriptionmsg": "wp-gpml-desc",
 	"license-name": "Apache-2.0",
 	"type": "other",
-	"AutoloadClasses": {
-		"WikiPathways\\GPML\\Converter": "src/Converter.php"
+	"config": {
+		"_prefix": "wpi"
 	},
-	"manifest_version": 1
+	"requires": {
+		"MediaWiki": ">= 1.31.0"
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "modules",
+		"remoteExtPath": "GPMLConverter/modules/"
+	},
+	"ResourceModules": {
+		"wpi.pvjs": {
+			"scripts": [
+				"pvjs.vanilla.js"
+			]
+		}
+	},
+	"AutoloadClasses": {
+		"WikiPathways\\GPML\\Converter": "src/Converter.php",
+		"WikiPathways\\GPML\\ConvertStream": "src/ConvertStream.php"
+	}
 }
