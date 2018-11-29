@@ -38,13 +38,15 @@ function handle_error {
 
 trap handle_error ERR
 
-for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
+for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*_*.gpml'); do
   if [ -s "$f" ]; then
     # TODO: which is better?
     #xmlstarlet val "$f";
     #if [ $? -eq 0 ]; then ... fi
     is_valid=$((xmlstarlet val "$f" | grep ' valid') || echo '');
     if [ ! "$is_valid" ]; then
+      echo "$f" >> "$INVALID_GPML_LIST"
+    elif [ $(xmlstarlet sel -N 'gpml=http://pathvisio.org/GPML/2013a' -t -v 'count(/gpml:Pathway/gpml:Group/@GroupRef)' "$f") != "0" ]; then
       echo "$f" >> "$INVALID_GPML_LIST"
     fi
   else

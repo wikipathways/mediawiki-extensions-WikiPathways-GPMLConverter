@@ -181,7 +181,7 @@ fi
 
 # if an output path isn't specified, we'll just convert to all the outputs.
 if [ -z "$path_out" ]; then
-  for format in json owl pdf png pwf react.svg svg txt; do
+  for format in json owl pdf png pwf react react.svg svg txt; do
     out_f="$dir_in/$stub_in.$format"
     #"$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$out_f";
 
@@ -198,9 +198,6 @@ if [ -z "$path_out" ]; then
     fi
   done
 
-  exit 0
-elif [ -e "$path_out" ]; then
-  echo "$path_out already converted. To overwrite, delete it and call gpml2 again."
   exit 0
 fi
 
@@ -227,6 +224,11 @@ elif [ "$gpml_version" != "$LATEST_GPML_VERSION" ]; then
   old_f="$dir_in/$stub_in.$gpml_version.gpml"
   mv "$gpml_f" "$old_f"
   pathvisio convert "$old_f" "$gpml_f"
+fi
+
+if [ -e "$path_out" ]; then
+  echo "$path_out already converted. To overwrite, delete it and call gpml2 again."
+  exit 0
 fi
 
 if [[ "$ext_out" =~ ^(gpml|owl|pdf|pwf|txt)$ ]]; then
@@ -256,7 +258,7 @@ elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
       > "$path_out"
   fi
 
-elif [[ "$ext_out" =~ ^(svg)$ ]]; then
+elif [[ "$ext_out" =~ ^(svg|react)$ ]]; then
   # TODO: check outputs against these tools:
   # https://search.google.com/structured-data/testing-tool
   # https://webmaster.yandex.com/tools/microtest/
@@ -270,7 +272,10 @@ elif [[ "$ext_out" =~ ^(svg)$ ]]; then
   json_f="$dir_out/$bare_stub_out.json"
   "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
 
-  if [[ "$base_out" =~ (react.svg)$ ]]; then
+  if [[ "$base_out" =~ (react)$ ]]; then
+    "$SCRIPT_DIR/gpml2" "$path_in" "$path_out.svg"
+    ln -s "./$base_out.svg" "$path_out";
+  elif [[ "$base_out" =~ (react.svg)$ ]]; then
     pvjs --react --theme "dark" < "$json_f" | xmlstarlet fo | tail -n +2 > "$path_out"
     # TODO: I should be able to use "xmlstarlet fo -o" instead of "tail -n +2"
     # to omit the xml declaration <?xml version="1.0"?>, but "xmlstarlet fo -o"

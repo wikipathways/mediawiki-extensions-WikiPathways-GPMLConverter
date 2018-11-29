@@ -1,3 +1,11 @@
+/* colors used by G. in the WikiPathways Summit designs
+   orange: #dc7145
+   light blue: #80d2e4
+   very light gray-ish blue: d8e4e4
+   purple shade: #bd5da6
+   dark background color: #112b3f
+*/
+
 .Viewport .Text, .Viewport .Text * {
   pointer-events: none;
 }
@@ -77,10 +85,11 @@ marker {
 }
 
 .CellularComponent > .Icon {
-  color: red;
-  fill: pink;
+  /* #dc7145 is orange-ish */
+  color: #dc7145;
+  fill: #dc7145;
   fill-opacity: 0.05;
-  stroke: orange;
+  stroke: #dc7145;
 }
 
 .Label > .Icon {

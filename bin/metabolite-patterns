@@ -67,6 +67,9 @@ elif [ $HELP == true ]; then
   exit 0
 fi
 
+CACHE_DIR="$HOME/metabolite-pattern-cache"
+mkdir -p "$CACHE_DIR"
+
 json_f="$1"
 
 if [ ! -f "$json_f" ]; then
@@ -78,11 +81,11 @@ base_out=$(basename -- "$json_f")
 ext_out="${base_out##*.}"
 stub_out="${base_out%.*}"
 
-css_out="$dir_out/$stub_out.metabolite-patterns.css"
 svg_out="$dir_out/$stub_out.metabolite-patterns.svg"
+css_out="$dir_out/$stub_out.metabolite-patterns.css"
 
 if [ -e "$svg_out" ] && [ -e "$css_out" ]; then
-  echo "$svg_out and "$css_out" already exist. To overwrite, delete them and try again."
+  echo "$svg_out & $stub_out.metabolite-patterns.css already exist. To overwrite, delete them & try again."
   exit 0
 fi
 
@@ -102,7 +105,7 @@ for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Met
   wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
   smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
   cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
-  cdkdepict_out="$dir_out/$identifier.cdkdepict.svg"
+  cdkdepict_out="$CACHE_DIR/$identifier.cdkdepict.svg"
 
   if [ ! -e "$cdkdepict_out" ]; then
     curl -L --get \
