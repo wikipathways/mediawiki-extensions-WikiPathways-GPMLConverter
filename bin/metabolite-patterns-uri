@@ -100,19 +100,23 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
  while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
   wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
   bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES"
+  if [ -z "$data_source" ] || [ -z "$identifier" ]; then
+    echo "Missing data source and/or identifier for a DataNode in $stub_out";
+    continue;
+  fi
 
   smiles=$(curl -s "$bridgedb_request_uri")
   bridgedb_request_status=$?
 
   if [ "$bridgedb_request_status" != 0 ] || [ -z "$smiles" ] || [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
-    if [ "$bridgedb_request_status" != 0 ]; then
-      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
-    elif [ -z "$smiles" ]; then
-      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
-    elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
-      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
-      echo '(The server has not found anything matching the request URI)'
-    fi
+#    if [ "$bridgedb_request_status" != 0 ]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
+#    elif [ -z "$smiles" ]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
+#    elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
+#      echo '(The server has not found anything matching the request URI)'
+#    fi
 
     # If the DataSource and Identifier specified don't get us a SMILES string,
     # it could be because BridgeDb doesn't support queries for that DataSource.
@@ -127,22 +131,22 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
     if [ ! -z "$hmdb_id" ]; then
       hmdb_identifier="HMDB"${hmdb_id:(-5)};
       bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
-      echo "Trying alternative bridgedb_request_uri: $bridgedb_request_uri"
+      #echo "Trying alternate bridgedb_request_uri: $bridgedb_request_uri"
       smiles=$(curl -s "$bridgedb_request_uri")
       bridgedb_request_status=$?
       if [ "$bridgedb_request_status" != 0 ]; then
-        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
-        break;
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
+        continue;
       elif [ -z "$smiles" ]; then
-        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
-        break;
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (nothing returned)";
+        continue;
       elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
-        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri";
         echo '(The server has not found anything matching the request URI)'
-        break;
+        continue;
       fi
     else
-      break;
+      continue;
     fi
   fi
 

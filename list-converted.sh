@@ -60,12 +60,19 @@ for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); d
       stub_f="${base_f%.*}"
       prefix="$dir_f/$stub_f"
       svg_f="$prefix.svg"
+      reactsvg_f="$prefix.react.svg"
 
-      if [ -s "$svg_f" ]; then
+      if [ -s "$svg_f" ] && [ -s "$reactsvg_f" ]; then
         echo "$f" >> "$CONVERTED_GPML_LIST"
-      elif [ -f "$svg_f" ]; then
-        echo "Removing empty file: $svg_f"
-	sudo rm -f "$svg_f"
+      elif [ -f "$svg_f" ] || [ -f "$reactsvg_f" ]; then
+        if [ -f "$svg_f" ]; then
+          echo "Removing empty file: $svg_f"
+  	  sudo rm -f "$svg_f"
+        fi
+        if [ -f "$reactsvg_f" ]; then
+          echo "Removing empty file: $reactsvg_f"
+  	  sudo rm -f "$reactsvg_f"
+        fi
       fi
     fi
   else

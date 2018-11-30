@@ -188,7 +188,7 @@ fi
 
 # if an output path isn't specified, we'll just convert to all the outputs.
 if [ -z "$path_out" ]; then
-  for format in json react.svg react svg owl pdf png pwf txt; do
+  for format in json react.svg svg owl pdf png react pwf txt; do
     out_f="$dir_in/$stub_in.$format"
     #"$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$out_f";
 
@@ -481,7 +481,6 @@ r /dev/stdin
     el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@filter])" "$path_out")
     for i in $(seq $el_count); do
       filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$path_out");
-      echo "filter_value: $filter_value"
       inverted_filter_value=$(invert_filter $filter_value)
       xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
   		    -u "(/svg:svg/svg:g//*[@filter])[$i]/@filter" \

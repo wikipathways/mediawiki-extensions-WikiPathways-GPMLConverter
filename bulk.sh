@@ -79,6 +79,6 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   fi
  
   # Make file permissions match what normal conversion would generate
-  sudo chown www-data:www-data "$prefix".*
-  sudo chmod 644 "$prefix".*
+  sudo chown www-data:www-data "$prefix"*
+  sudo chmod 644 "$prefix"*
 done
