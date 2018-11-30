@@ -38,6 +38,8 @@ function handle_error {
 
 trap handle_error ERR
 
+# TODO: a globbing pattern like this might be better:
+# ls -la ./WP[0-9]*[0-9]_[0-9]*[0-9].[a-z][a-z][a-z]
 for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*_*.gpml'); do
   if [ -s "$f" ]; then
     # TODO: which is better?

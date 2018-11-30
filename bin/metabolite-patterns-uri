@@ -59,16 +59,15 @@ if [ $VERSION == true ]; then
   echo "1.0.0"
   exit 0
 elif [ $HELP == true ]; then
-  echo 'usage: metabolite-patterns --version'
-  echo '       metabolite-patterns --help'
-  echo '       metabolite-patterns <input> [output]'
+  echo 'usage: metabolite-patterns-uri --version'
+  echo '       metabolite-patterns-uri --help'
+  echo '       metabolite-patterns-uri <input> [output]'
   echo ' '
-  echo 'metabolite-pattern WP1.json'
+  echo 'metabolite-patterns-uri WP1.json'
   exit 0
 fi
 
 json_f="$1"
-#dir_out="$2"
 
 if [ ! -f "$json_f" ]; then
   error_exit "Missing file '"$json_f"'"
@@ -79,8 +78,8 @@ base_out=$(basename -- "$json_f")
 ext_out="${base_out##*.}"
 stub_out="${base_out%.*}"
 
-css_out="$dir_out/$stub_out.metabolite-patterns.css"
-svg_out="$dir_out/$stub_out.metabolite-patterns.svg"
+css_out="$dir_out/$stub_out.metabolite-patterns-uri.css"
+svg_out="$dir_out/$stub_out.metabolite-patterns-uri.svg"
 
 if [ -e "$svg_out" ] && [ -e "$css_out" ]; then
   echo "$svg_out and "$css_out" already exist. To overwrite, delete them and try again."
@@ -97,13 +96,57 @@ if [ -e "$css_out" ]; then
   error_exit "File already exists: '"$css_out"'"
 fi
 
-for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | {xrefDataSource, xrefIdentifier, type}' "$json_f"); do
-  data_source=$(echo $metabolite_data | jq -r .xrefDataSource);
-  identifier=$(echo $metabolite_data | jq -r .xrefIdentifier);
-  wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
-  smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
+jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | [.xrefDataSource, .xrefIdentifier, [.type[] | select(startswith("wikidata:"))][0], [.type[] | select(startswith("hmdb:") and length == 14)][0]] | @tsv' "$json_f" | \
+ while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
+  wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
+  bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES"
+
+  smiles=$(curl -s "$bridgedb_request_uri")
+  bridgedb_request_status=$?
+
+  if [ "$bridgedb_request_status" != 0 ] || [ -z "$smiles" ] || [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+    if [ "$bridgedb_request_status" != 0 ]; then
+      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
+    elif [ -z "$smiles" ]; then
+      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
+    elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+      echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
+      echo '(The server has not found anything matching the request URI)'
+    fi
+
+    # If the DataSource and Identifier specified don't get us a SMILES string,
+    # it could be because BridgeDb doesn't support queries for that DataSource.
+    # For example, WP396_97382 has a DataNode with PubChem-compound:3081372,
+    # http://webservice.bridgedb.org/Human/attributes/PubChem-compound/3081372?attrName=SMILES
+    # doesn't return anything. However, that DataNode can be mapped to HMDB:HMDB61196, and
+    # the url http://webservice.bridgedb.org/Human/attributes/HMDB/HMDB61196
+    # does return a SMILES string.
+    # Note that BridgeDb currently requires us to use the 5 digit HMDB identifier,
+    # even though there is another format that uses more digits.
+
+    if [ ! -z "$hmdb_id" ]; then
+      hmdb_identifier="HMDB"${hmdb_id:(-5)};
+      bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
+      echo "Trying alternative bridgedb_request_uri: $bridgedb_request_uri"
+      smiles=$(curl -s "$bridgedb_request_uri")
+      bridgedb_request_status=$?
+      if [ "$bridgedb_request_status" != 0 ]; then
+        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
+        break;
+      elif [ -z "$smiles" ]; then
+        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
+        break;
+      elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+        echo "Failed to get smiles string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
+        echo '(The server has not found anything matching the request URI)'
+        break;
+      fi
+    else
+      break;
+    fi
+  fi
+
   cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
-  
   cat >> "$css_out" <<EOF
 [typeof~="wikidata:$wikidata_identifier"]:hover > .Icon {
   cursor: default;
@@ -116,8 +159,8 @@ for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Met
   font-size: 0px;
 }
 EOF
-
-#  "$css_out" <<EOF
+  
+  #  "$css_out" <<EOF
 #[typeof~=wikidata:$wikidata_identifier]:hover > .Icon {
 #  cursor: default;
 #  fill: url(#Pattern$wikidata_identifier);
@@ -129,7 +172,7 @@ EOF
 #  font-size: 0px;
 #}
 #EOF
-
+  
   # TODO: do we want to disable the clip-path on hover?
   #[typeof~=wikidata:$wikidata_identifier]:hover > .Icon {
   #  clip-path: unset;
@@ -161,7 +204,6 @@ EOF
                     -i '$previmage' -t attr -n "href" -v "$cdkdepict_url" \
                     -i '$previmage' -t attr -n "preserveAspectRatio" -v "none" \
   		  "$svg_out"
-
 done
  
 exit 0

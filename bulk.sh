@@ -4,6 +4,8 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
+LATEST_GPML_VERSION="2013a"
+
 INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 UNCONVERTIBLE_GPML_LIST="$HOME/unconvertible-gpmls.txt"
 CONVERTED_GPML_LIST="$HOME/converted-gpmls.txt"
@@ -51,6 +53,14 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   #echo '------------------------------------------------' | tee -a "$LOG_FILE"
   echo "$f" | tee -a "$LOG_FILE"
 
+  # removing invalid identifiers
+  sudo $(readlink $(which xmlstarlet)) ed -L -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" \
+      -u "/gpml:Pathway/gpml:DataNode/gpml:Xref[@Database='undefined']/@Database" \
+      -v '' \
+      -u "/gpml:Pathway/gpml:DataNode/gpml:Xref[@ID='undefined']/@ID" \
+      -v '' \
+      "$f"
+
   dir_f=$(dirname "$f")
   base_f=$(basename -- "$f")
   ext_f="${base_f##*.}"
@@ -63,9 +73,9 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
     #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
     sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2>> "$LOG_FILE";
   else
-    # Convert only as needed to get SVGs:
-    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2>> "$LOG_FILE";
+    # Convert only as needed to get dynamic SVGs:
+    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
   fi
  
   # Make file permissions match what normal conversion would generate
