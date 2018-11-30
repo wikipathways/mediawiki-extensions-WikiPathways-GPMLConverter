@@ -4,26 +4,26 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
-LATEST_GPML_VERSION="2013a"
-
 CACHE_DIR="$dir_out"
-WP_IMAGES_DIR="$WP_DIR/images"
-if [ ! -z "$WP_DIR" ] && [ -r "$WP_IMAGES_DIR" ] && [ -w "$WP_IMAGES_DIR" ]; then
-  CACHE_DIR="$WP_IMAGES_DIR/metabolite-pattern-cache"
+LOGS_DIR="$dir_out/logs"
+TARGET_USER="$USER"
+if [ ! -z "$WP_DIR" ] && [ -r "$WP_DIR" ] && [ -w "$WP_DIR" ]; then
+  CACHE_DIR="$WP_DIR/images/metabolite-pattern-cache"
+  LOGS_DIR="$WP_DIR/logs"
+  TARGET_USER='www-data'
 elif [ ! -z "$HOME" ]; then
   CACHE_DIR="$HOME/metabolite-pattern-cache"
+  LOGS_DIR="$HOME/bulk-gpml2-logs"
 fi
+LOG_FILE="$LOGS_DIR/bulk-gpml2.log"
+INVALID_GPML_LIST="$LOGS_DIR/invalid-gpmls.txt"
+UNCONVERTIBLE_GPML_LIST="$LOGS_DIR/unconvertible-gpmls.txt"
+CONVERTED_GPML_LIST="$LOGS_DIR/converted-gpmls.txt"
 
-INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
-UNCONVERTIBLE_GPML_LIST="$HOME/unconvertible-gpmls.txt"
-CONVERTED_GPML_LIST="$HOME/converted-gpmls.txt"
-
-TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
-LOG_FILE="$HOME/bulk$TIMESTAMP.log"
-touch "$LOG_FILE"
+LATEST_GPML_VERSION="2013a"
 
 cleanup() {
-  sudo -S chown www-data:wpdevs "$CACHE_DIR"
+  sudo -S chown "$TARGET_USER":wpdevs "$CACHE_DIR"
   sudo -S chmod 664 "$CACHE_DIR"
 }
 
@@ -52,6 +52,10 @@ trap error_exit ERR
 # TODO what about the following?
 # SIGHUP SIGINT SIGTERM
 trap cleanup EXIT INT QUIT TERM
+
+mkdir -p "$CACHE_DIR"
+mkdir -p "$LOGS_DIR"
+touch "$LOG_FILE" "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST"
 
 TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
@@ -88,6 +92,8 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   fi
  
   # Make file permissions match what normal conversion would generate
-  sudo -S chown www-data:www-data "$prefix"*
+  sudo -S chown "$TARGET_USER":"$TARGET_USER" "$prefix"*
   sudo -S chmod 644 "$prefix"*
+
+  echo "$f" >> "$CONVERTED_GPML_LIST"
 done

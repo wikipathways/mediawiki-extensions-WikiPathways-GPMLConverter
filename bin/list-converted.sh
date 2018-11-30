@@ -4,18 +4,15 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
-TIMESTAMP=$(date +"%Y-%m-%d-%H%M%S")
-
-LOG_FILE="$HOME/bulk$TIMESTAMP.log"
-touch "$LOG_FILE"
-
-INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
-rm -f "$INVALID_GPML_LIST"
-touch "$INVALID_GPML_LIST"
-
-CONVERTED_GPML_LIST="$HOME/converted-gpmls.txt"
-rm -f "$CONVERTED_GPML_LIST"
-touch "$CONVERTED_GPML_LIST"
+LOGS_DIR="$dir_out/logs"
+if [ ! -z "$WP_DIR" ] && [ -r "$WP_DIR" ] && [ -w "$WP_DIR" ]; then
+  LOGS_DIR="$WP_DIR/logs"
+elif [ ! -z "$HOME" ]; then
+  LOGS_DIR="$HOME/bulk-gpml2-logs"
+fi
+LOG_FILE="$LOGS_DIR/bulk-gpml2.log"
+INVALID_GPML_LIST="$LOGS_DIR/invalid-gpmls.txt"
+CONVERTED_GPML_LIST="$LOGS_DIR/converted-gpmls.txt"
 
 # Based on http://linuxcommand.org/lc3_wss0140.php
 PROGNAME=$(basename $0)
@@ -42,6 +39,10 @@ function handle_error {
 }
 
 trap handle_error ERR
+
+mkdir -p "$LOGS_DIR"
+rm -f "$LOG_FILE" "$INVALID_GPML_LIST" "$CONVERTED_GPML_LIST"
+touch "$LOG_FILE" "$INVALID_GPML_LIST" "$CONVERTED_GPML_LIST"
 
 for f in $(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml'); do
   if [ -s "$f" ]; then
