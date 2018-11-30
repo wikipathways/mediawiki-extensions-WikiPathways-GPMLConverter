@@ -6,6 +6,14 @@ SCRIPT_DIR=$(get_script_dir)
 
 LATEST_GPML_VERSION="2013a"
 
+CACHE_DIR="$dir_out"
+WP_IMAGES_DIR="$WP_DIR/images"
+if [ ! -z "$WP_DIR" ] && [ -r "$WP_IMAGES_DIR" ] && [ -w "$WP_IMAGES_DIR" ]; then
+  CACHE_DIR="$WP_IMAGES_DIR/metabolite-pattern-cache"
+elif [ ! -z "$HOME" ]; then
+  CACHE_DIR="$HOME/metabolite-pattern-cache"
+fi
+
 INVALID_GPML_LIST="$HOME/invalid-gpmls.txt"
 UNCONVERTIBLE_GPML_LIST="$HOME/unconvertible-gpmls.txt"
 CONVERTED_GPML_LIST="$HOME/converted-gpmls.txt"
@@ -15,7 +23,8 @@ LOG_FILE="$HOME/bulk$TIMESTAMP.log"
 touch "$LOG_FILE"
 
 cleanup() {
-  echo "done" > /dev/null
+  sudo chown www-data:wpdevs "$CACHE_DIR"
+  sudo chmod 664 "$CACHE_DIR"
 }
 
 # Based on http://linuxcommand.org/lc3_wss0140.php

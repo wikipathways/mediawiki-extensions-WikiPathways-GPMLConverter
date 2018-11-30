@@ -88,20 +88,16 @@ mkdir -p "$CACHE_DIR"
 svg_out="$dir_out/$stub_out.metabolite-patterns.svg"
 css_out="$dir_out/$stub_out.metabolite-patterns.css"
 
-if [ -e "$svg_out" ] && [ -e "$css_out" ]; then
-  echo "$svg_out & $stub_out.metabolite-patterns.css already exist. To overwrite, delete them & try again."
+if [ -s "$svg_out" ] && [ -s "$css_out" ]; then
+  #echo "$svg_out & $stub_out.metabolite-patterns.css already exist. To overwrite, delete them & try again."
   exit 0
 fi
 
-if [ -f "$svg_out" ]; then
-  error_exit "File already exists: '"$svg_out"'"
-else
-  echo '<svg><defs></defs></svg>' > "$svg_out"
-fi
+# If only one of them exists, we'll recreate both
+if [ -s "$svg_out" ]; then rm "$svg_out"; fi
+if [ -s "$css_out" ]; then rm "$css_out"; fi
 
-if [ -e "$css_out" ]; then
-  error_exit "File already exists: '"$css_out"'"
-fi
+echo '<svg><defs></defs></svg>' > "$svg_out"
 
 jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | [.xrefDataSource, .xrefIdentifier, [.type[] | select(startswith("wikidata:"))][0], [.type[] | select(startswith("hmdb:") and length == 14)][0]] | @tsv' "$json_f" | \
  while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
@@ -138,25 +134,26 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
 
     if [ ! -z "$hmdb_id" ]; then
       hmdb_identifier="HMDB"${hmdb_id:(-5)};
+      bridgedb_request_uri_orig="$bridgedb_request_uri"
       bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
       #echo "Trying alternate bridgedb_request_uri: $bridgedb_request_uri"
       smiles=$(curl -Ls "$bridgedb_request_uri")
       bridgedb_request_status=$?
       if [ "$bridgedb_request_status" != 0 ]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
         continue;
       elif [ -z "$smiles" ]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (nothing returned)";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri (nothing returned)";
         continue;
       elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri";
         echo '(The server has not found anything matching the request URI)'
         continue;
       fi
 
       cdkdepict_out_orig="$cdkdepict_out"
       cdkdepict_out="$CACHE_DIR/HMDB-"$(echo "$hmdb_identifier" | sed -e 's/[^A-Za-z0-9._-]/_/g')".cdkdepict.svg"
-      if [ ! -e "$cdkdepict_out" ]; then
+      if [ ! -s "$cdkdepict_out" ]; then
         ln -s "$cdkdepict_out" "$cdkdepict_out_orig"
       fi
     else
@@ -168,7 +165,7 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
   #cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles_url_encoded&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
   #echo "cdkdepict_url: $cdkdepict_url"
 
-  if [ ! -e "$cdkdepict_out" ]; then
+  if [ ! -s "$cdkdepict_out" ]; then
     curl -Ls --get \
        --data-urlencode "smi=$smiles" \
        --data-urlencode 'abbr=on' \

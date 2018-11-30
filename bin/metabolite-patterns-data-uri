@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: this file is missing improvements that exists its siblings
+
 # see https://stackoverflow.com/a/246128/5354298
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
@@ -99,12 +101,14 @@ for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Met
   data_source=$(echo $metabolite_data | jq -r .xrefDataSource);
   identifier=$(echo $metabolite_data | jq -r .xrefIdentifier);
   wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
-  smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
+  smiles=$(curl -Ls "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
   cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
   cdkdepict_out="$dir_out/$identifier.cdkdepict.svg"
 
+  # TODO: try the alternate BridgeDb URL for HMDB
+
   if [ ! -e "$cdkdepict_out" ]; then
-    curl -L --get \
+    curl -Ls --get \
        --data-urlencode "smi=$smiles" \
        --data-urlencode 'abbr=on' \
        --data-urlencode 'hdisp=bridgehead' \

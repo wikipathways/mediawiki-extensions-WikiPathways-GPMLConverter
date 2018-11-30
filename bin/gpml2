@@ -232,8 +232,8 @@ elif [ "$gpml_version" != "$LATEST_GPML_VERSION" ]; then
   pathvisio convert "$old_f" "$gpml_f"
 fi
 
-if [ -e "$path_out" ]; then
-  echo "$path_out already converted. To overwrite, delete it and call gpml2 again."
+if [ -s "$path_out" ]; then
+  #echo "$path_out already converted. To overwrite, delete it and call gpml2 again."
   exit 0
 fi
 

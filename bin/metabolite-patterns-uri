@@ -80,20 +80,16 @@ stub_out="${base_out%.*}"
 css_out="$dir_out/$stub_out.metabolite-patterns-uri.css"
 svg_out="$dir_out/$stub_out.metabolite-patterns-uri.svg"
 
-if [ -e "$svg_out" ] && [ -e "$css_out" ]; then
-  echo "$svg_out and "$css_out" already exist. To overwrite, delete them and try again."
+if [ -s "$svg_out" ] && [ -s "$css_out" ]; then
+  #echo "$svg_out & $stub_out.metabolite-patterns.css already exist. To overwrite, delete them & try again."
   exit 0
 fi
 
-if [ -f "$svg_out" ]; then
-  error_exit "File already exists: '"$svg_out"'"
-else
-  echo '<svg><defs></defs></svg>' > "$svg_out"
-fi
+# If only one of them exists, we'll recreate both
+if [ -s "$svg_out" ]; then rm "$svg_out"; fi
+if [ -s "$css_out" ]; then rm "$css_out"; fi
 
-if [ -e "$css_out" ]; then
-  error_exit "File already exists: '"$css_out"'"
-fi
+echo '<svg><defs></defs></svg>' > "$svg_out"
 
 jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | [.xrefDataSource, .xrefIdentifier, [.type[] | select(startswith("wikidata:"))][0], [.type[] | select(startswith("hmdb:") and length == 14)][0]] | @tsv' "$json_f" | \
  while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
