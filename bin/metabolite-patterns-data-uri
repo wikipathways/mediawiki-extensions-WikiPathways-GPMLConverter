@@ -55,8 +55,7 @@ while true; do
 done
 
 if [ $VERSION == true ]; then
-  # TODO: this is not a real version
-  echo "1.0.0"
+  jq '.version' "$SCRIPT_DIR/../extension.json"
   exit 0
 elif [ $HELP == true ]; then
   echo 'usage: metabolite-patterns --version'

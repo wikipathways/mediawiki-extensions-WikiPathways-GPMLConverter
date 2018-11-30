@@ -89,5 +89,5 @@ xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v 'count(/svg:svg/svg:g/s
 for 
 xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]/svg:g/svg:path' "/svg:svg/svg:g/svg:g[contains(@typeof,'Edge')][last()]" WP2868_98142.svg; echo ''
 
-rm wow.*; ./bin/gpml2 /home/wikipathways.org/images/wikipathways/a/a4/WP2868_98142.gpml wow.svg
+rm WP2868_98142.*; ./bin/gpml2 /home/wikipathways.org/images/wikipathways/a/a4/WP2868_98142.gpml WP2868_98142.svg
 ```

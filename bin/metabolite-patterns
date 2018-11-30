@@ -55,8 +55,7 @@ while true; do
 done
 
 if [ $VERSION == true ]; then
-  # TODO: this is not a real version
-  echo "1.0.0"
+  jq '.version' "$SCRIPT_DIR/../extension.json"
   exit 0
 elif [ $HELP == true ]; then
   echo 'usage: metabolite-patterns --version'
@@ -67,11 +66,7 @@ elif [ $HELP == true ]; then
   exit 0
 fi
 
-CACHE_DIR="$HOME/metabolite-pattern-cache"
-mkdir -p "$CACHE_DIR"
-
 json_f="$1"
-
 if [ ! -f "$json_f" ]; then
   error_exit "Missing file '"$json_f"'"
 fi
@@ -80,6 +75,15 @@ dir_out=$(dirname "$json_f")
 base_out=$(basename -- "$json_f")
 ext_out="${base_out##*.}"
 stub_out="${base_out%.*}"
+
+CACHE_DIR="$dir_out"
+WP_IMAGES_DIR="$WP_DIR/images"
+if [ ! -z "$WP_DIR" ] && [ -r "$WP_IMAGES_DIR" ] && [ -w "$WP_IMAGES_DIR" ]; then
+  CACHE_DIR="$WP_IMAGES_DIR/metabolite-pattern-cache"
+elif [ ! -z "$HOME" ]; then
+  CACHE_DIR="$HOME/metabolite-pattern-cache"
+fi
+mkdir -p "$CACHE_DIR"
 
 svg_out="$dir_out/$stub_out.metabolite-patterns.svg"
 css_out="$dir_out/$stub_out.metabolite-patterns.css"
@@ -99,28 +103,73 @@ if [ -e "$css_out" ]; then
   error_exit "File already exists: '"$css_out"'"
 fi
 
-for metabolite_data in $(jq -c '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | {xrefDataSource, xrefIdentifier, type}' "$json_f"); do
-  data_source=$(echo $metabolite_data | jq -r .xrefDataSource);
-  identifier=$(echo $metabolite_data | jq -r .xrefIdentifier);
-
+jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | [.xrefDataSource, .xrefIdentifier, [.type[] | select(startswith("wikidata:"))][0], [.type[] | select(startswith("hmdb:") and length == 14)][0]] | @tsv' "$json_f" | \
+ while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
+  wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
+  bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES"
   if [ -z "$data_source" ] || [ -z "$identifier" ]; then
-    if [ -z "$data_source" ]; then
-      echo "A DataNode is missing its data source in file $json_f"
-    fi
-    if [ -z "$identifier" ]; then
-      echo "A DataNode is missing its identifier in file $json_f"
-    fi
-
-    break;
+    echo "Missing data source and/or identifier for a DataNode in $stub_out";
+    continue;
   fi
 
-  wikidata_identifier=$(echo $metabolite_data | jq -r '[.type[] | select(startswith("wikidata:"))][0]' | sed 's/wikidata://');
-  smiles=$(curl -s "http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES")
-  cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
-  cdkdepict_out="$CACHE_DIR/$identifier.cdkdepict.svg"
+  smiles=$(curl -Ls "$bridgedb_request_uri")
+  bridgedb_request_status=$?
+  cdkdepict_out="$CACHE_DIR/"$(echo "$data_source-$identifier" | sed -e 's/[^A-Za-z0-9._-]/_/g')".cdkdepict.svg"
+
+  if [ "$bridgedb_request_status" != 0 ] || [ -z "$smiles" ] || [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+#    if [ "$bridgedb_request_status" != 0 ]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (status code: $bridgedb_request_status)";
+#    elif [ -z "$smiles" ]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri (nothing returned)";
+#    elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+#      echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from $bridgedb_request_uri";
+#      echo '(The server has not found anything matching the request URI)'
+#    fi
+
+    # If the DataSource and Identifier specified don't get us a SMILES string,
+    # it could be because BridgeDb doesn't support queries for that DataSource.
+    # For example, WP396_97382 has a DataNode with PubChem-compound:3081372,
+    # http://webservice.bridgedb.org/Human/attributes/PubChem-compound/3081372?attrName=SMILES
+    # doesn't return anything. However, that DataNode can be mapped to HMDB:HMDB61196, and
+    # the url http://webservice.bridgedb.org/Human/attributes/HMDB/HMDB61196
+    # does return a SMILES string.
+    # Note that BridgeDb currently requires us to use the 5 digit HMDB identifier,
+    # even though there is another format that uses more digits.
+
+    if [ ! -z "$hmdb_id" ]; then
+      hmdb_identifier="HMDB"${hmdb_id:(-5)};
+      bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
+      #echo "Trying alternate bridgedb_request_uri: $bridgedb_request_uri"
+      smiles=$(curl -Ls "$bridgedb_request_uri")
+      bridgedb_request_status=$?
+      if [ "$bridgedb_request_status" != 0 ]; then
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
+        continue;
+      elif [ -z "$smiles" ]; then
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (nothing returned)";
+        continue;
+      elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri";
+        echo '(The server has not found anything matching the request URI)'
+        continue;
+      fi
+
+      cdkdepict_out_orig="$cdkdepict_out"
+      cdkdepict_out="$CACHE_DIR/HMDB-"$(echo "$hmdb_identifier" | sed -e 's/[^A-Za-z0-9._-]/_/g')".cdkdepict.svg"
+      if [ ! -e "$cdkdepict_out" ]; then
+        ln -s "$cdkdepict_out" "$cdkdepict_out_orig"
+      fi
+    else
+      continue;
+    fi
+  fi
+
+  #smiles_url_encoded=$(echo "$smiles" | jq -R '@uri')
+  #cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles_url_encoded&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
+  #echo "cdkdepict_url: $cdkdepict_url"
 
   if [ ! -e "$cdkdepict_out" ]; then
-    curl -L --get \
+    curl -Ls --get \
        --data-urlencode "smi=$smiles" \
        --data-urlencode 'abbr=on' \
        --data-urlencode 'hdisp=bridgehead' \

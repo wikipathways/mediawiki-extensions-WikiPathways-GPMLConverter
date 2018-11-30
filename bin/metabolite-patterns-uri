@@ -55,8 +55,7 @@ while true; do
 done
 
 if [ $VERSION == true ]; then
-  # TODO: this is not a real version
-  echo "1.0.0"
+  jq '.version' "$SCRIPT_DIR/../extension.json"
   exit 0
 elif [ $HELP == true ]; then
   echo 'usage: metabolite-patterns-uri --version'
@@ -105,7 +104,7 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
     continue;
   fi
 
-  smiles=$(curl -s "$bridgedb_request_uri")
+  smiles=$(curl -Ls "$bridgedb_request_uri")
   bridgedb_request_status=$?
 
   if [ "$bridgedb_request_status" != 0 ] || [ -z "$smiles" ] || [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
@@ -132,7 +131,7 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
       hmdb_identifier="HMDB"${hmdb_id:(-5)};
       bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
       #echo "Trying alternate bridgedb_request_uri: $bridgedb_request_uri"
-      smiles=$(curl -s "$bridgedb_request_uri")
+      smiles=$(curl -Ls "$bridgedb_request_uri")
       bridgedb_request_status=$?
       if [ "$bridgedb_request_status" != 0 ]; then
         echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
@@ -150,7 +149,9 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
     fi
   fi
 
-  cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
+  smiles_url_encoded=$(echo "$smiles" | jq -R '@uri')
+  cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles_url_encoded&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
+
   cat >> "$css_out" <<EOF
 [typeof~="wikidata:$wikidata_identifier"]:hover > .Icon {
   cursor: default;
