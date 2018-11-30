@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This file is a wrapper for bulk-runner.
+# It asks for the user to prove sudo rights before running bulk-runner.
+
+# Run it: ./bin/bulk-convert
+# If it stops, 'ps aux | grep bulk' will show status 'T'
+# Get job number: jobs
+# Foreground the job: fg 1 # specify the job number
+# Background it with Ctrl-Z or bg
+
+# see https://stackoverflow.com/a/246128/5354298
+get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
+SCRIPT_DIR=$(get_script_dir)
+
+if sudo echo 'Starting...'
+then
+    nohup "$SCRIPT_DIR/bulk-runner.sh" &
+fi

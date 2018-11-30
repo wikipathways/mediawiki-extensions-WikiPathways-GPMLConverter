@@ -23,8 +23,8 @@ LOG_FILE="$HOME/bulk$TIMESTAMP.log"
 touch "$LOG_FILE"
 
 cleanup() {
-  sudo chown www-data:wpdevs "$CACHE_DIR"
-  sudo chmod 664 "$CACHE_DIR"
+  sudo -S chown www-data:wpdevs "$CACHE_DIR"
+  sudo -S chmod 664 "$CACHE_DIR"
 }
 
 # Based on http://linuxcommand.org/lc3_wss0140.php
@@ -63,7 +63,7 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   echo "$f" | tee -a "$LOG_FILE"
 
   # removing invalid identifiers
-  sudo $(readlink $(which xmlstarlet)) ed -L -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" \
+  sudo -S $(readlink $(which xmlstarlet)) ed -L -N gpml="http://pathvisio.org/GPML/$LATEST_GPML_VERSION" \
       -u "/gpml:Pathway/gpml:DataNode/gpml:Xref[@Database='undefined']/@Database" \
       -v '' \
       -u "/gpml:Pathway/gpml:DataNode/gpml:Xref[@ID='undefined']/@ID" \
@@ -79,15 +79,15 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   # TODO: how do we want to pipe to stdout and to log file(s)?
   if [[ $TARGET_FORMAT == '*' ]]; then
     # Convert to all supported formats:
-    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" 2>> "$LOG_FILE";
+    #sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" 2>> "$LOG_FILE";
   else
     # Convert only as needed to get dynamic SVGs:
-    #sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
+    #sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
   fi
  
   # Make file permissions match what normal conversion would generate
-  sudo chown www-data:www-data "$prefix"*
-  sudo chmod 644 "$prefix"*
+  sudo -S chown www-data:www-data "$prefix"*
+  sudo -S chmod 644 "$prefix"*
 done
