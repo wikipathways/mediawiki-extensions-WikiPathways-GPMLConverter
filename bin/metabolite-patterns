@@ -154,7 +154,7 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
       cdkdepict_out_orig="$cdkdepict_out"
       cdkdepict_out="$CACHE_DIR/HMDB-"$(echo "$hmdb_identifier" | sed -e 's/[^A-Za-z0-9._-]/_/g')".cdkdepict.svg"
       if [ ! -s "$cdkdepict_out" ]; then
-        ln -s "$cdkdepict_out" "$cdkdepict_out_orig"
+        ln -s "./"$(basename "$cdkdepict_out") "$cdkdepict_out_orig"
       fi
     else
       continue;
