@@ -96,7 +96,7 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
   wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
   bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES"
   if [ -z "$data_source" ] || [ -z "$identifier" ]; then
-    echo "Missing data source and/or identifier for a DataNode in $stub_out";
+    echo "Missing Xref data source and/or identifier in $stub_out";
     continue;
   fi
 
@@ -125,18 +125,19 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
 
     if [ ! -z "$hmdb_id" ]; then
       hmdb_identifier="HMDB"${hmdb_id:(-5)};
+      bridgedb_request_uri_orig="$bridgedb_request_uri"
       bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/HMDB/$hmdb_identifier?attrName=SMILES"
       #echo "Trying alternate bridgedb_request_uri: $bridgedb_request_uri"
       smiles=$(curl -Ls "$bridgedb_request_uri")
       bridgedb_request_status=$?
       if [ "$bridgedb_request_status" != 0 ]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri (status code: $bridgedb_request_status)";
         continue;
       elif [ -z "$smiles" ]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri (nothing returned)";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri (nothing returned)";
         continue;
       elif [[ "$smiles" =~ 'The server has not found anything matching the request URI' ]]; then
-        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from alternate $bridgedb_request_uri";
+        echo "Failed to get SMILES string for $stub_out:$data_source:$identifier from both $bridgedb_request_uri_orig and alternate $bridgedb_request_uri";
         echo '(The server has not found anything matching the request URI)'
         continue;
       fi

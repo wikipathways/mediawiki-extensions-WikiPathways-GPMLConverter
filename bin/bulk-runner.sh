@@ -83,12 +83,12 @@ for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP
   # TODO: how do we want to pipe to stdout and to log file(s)?
   if [[ $TARGET_FORMAT == '*' ]]; then
     # Convert to all supported formats:
-    #sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" 2>> "$LOG_FILE";
+    #sudo -S -i "$SCRIPT_DIR/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -S -i "$SCRIPT_DIR/gpml2" "$f" 2>> "$LOG_FILE";
   else
     # Convert only as needed to get dynamic SVGs:
-    #sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -S -i "$SCRIPT_DIR/bin/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
+    #sudo -S -i "$SCRIPT_DIR/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
+    sudo -S -i "$SCRIPT_DIR/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
   fi
  
   # Make file permissions match what normal conversion would generate

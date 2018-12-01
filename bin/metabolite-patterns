@@ -101,12 +101,15 @@ echo '<svg><defs></defs></svg>' > "$svg_out"
 
 jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(.type)[] | [.xrefDataSource, .xrefIdentifier, [.type[] | select(startswith("wikidata:"))][0], [.type[] | select(startswith("hmdb:") and length == 14)][0]] | @tsv' "$json_f" | \
  while IFS=$'\t' read -r data_source identifier wikidata_id hmdb_id; do
-  wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
-  bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source/$identifier?attrName=SMILES"
   if [ -z "$data_source" ] || [ -z "$identifier" ]; then
-    echo "Missing data source and/or identifier for a DataNode in $stub_out";
+    echo "Missing Xref data source and/or identifier in $stub_out";
     continue;
   fi
+
+  wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
+  data_source_url_encoded=$(echo "$data_source" | jq -R '@uri')
+  identifier_url_encoded=$(echo "$identifier" | jq -R '@uri')
+  bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source_url_encoded/$identifier_url_encoded?attrName=SMILES"
 
   smiles=$(curl -Ls "$bridgedb_request_uri")
   bridgedb_request_status=$?
@@ -160,10 +163,6 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
       continue;
     fi
   fi
-
-  #smiles_url_encoded=$(echo "$smiles" | jq -R '@uri')
-  #cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles_url_encoded&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
-  #echo "cdkdepict_url: $cdkdepict_url"
 
   if [ ! -s "$cdkdepict_out" ]; then
     curl -Ls --get \
