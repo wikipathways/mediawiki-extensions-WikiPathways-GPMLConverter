@@ -146,8 +146,10 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
     fi
   fi
 
-  smiles_url_encoded=$(echo "$smiles" | jq -R '@uri')
+  smiles_url_encoded=$(echo "$smiles" | jq -Rr '@uri')
+  echo "smiles_url_encoded: $smiles_url_encoded"
   cdkdepict_url="http://www.simolecule.com/cdkdepict/depict/bow/svg?smi=$smiles_url_encoded&abbr=on&hdisp=bridgehead&showtitle=false&zoom=1.0&annotate=none"
+  echo "cdkdepict_url: $cdkdepict_url"
 
   cat >> "$css_out" <<EOF
 [typeof~="wikidata:$wikidata_identifier"]:hover > .Icon {

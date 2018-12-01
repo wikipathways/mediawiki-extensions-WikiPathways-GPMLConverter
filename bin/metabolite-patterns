@@ -107,8 +107,8 @@ jq -r '[.entitiesById[] | select(.type | contains(["Metabolite"]))] | unique_by(
   fi
 
   wikidata_identifier=$(echo "$wikidata_id" | sed 's/wikidata://');
-  data_source_url_encoded=$(echo "$data_source" | jq -R '@uri')
-  identifier_url_encoded=$(echo "$identifier" | jq -R '@uri')
+  data_source_url_encoded=$(echo "$data_source" | jq -Rr '@uri')
+  identifier_url_encoded=$(echo "$identifier" | jq -Rr '@uri')
   bridgedb_request_uri="http://webservice.bridgedb.org/Human/attributes/$data_source_url_encoded/$identifier_url_encoded?attrName=SMILES"
 
   smiles=$(curl -Ls "$bridgedb_request_uri")
