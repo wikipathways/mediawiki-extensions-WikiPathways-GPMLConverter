@@ -53,15 +53,57 @@ trap error_exit ERR
 # SIGHUP SIGINT SIGTERM
 trap cleanup EXIT INT QUIT TERM
 
-mkdir -p "$CACHE_DIR"
-mkdir -p "$LOGS_DIR"
-touch "$LOG_FILE" "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST"
-
 TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
+mkdir -p "$CACHE_DIR"
+mkdir -p "$LOGS_DIR"
+rm -f "$INVALID_GPML_LIST" "$CONVERTED_GPML_LIST"
+touch "$LOG_FILE" "$UNCONVERTIBLE_GPML_LIST" "$INVALID_GPML_LIST" "$CONVERTED_GPML_LIST"
+
+# TODO: find has an option to call "-exec". Better than a for loop?
+# TODO: a globbing pattern like this might be better:
+# ls -la ./WP[0-9]*[0-9]_[0-9]*[0-9].[a-z][a-z][a-z]
+for f in $(find "/home/wikipathways.org/images/wikipathways/" -name 'WP*_*.gpml'); do
+  if [ -s "$f" ]; then
+    # TODO: which is better?
+    #xmlstarlet val "$f";
+    #if [ $? -eq 0 ]; then ... fi
+    is_valid=$((xmlstarlet val "$f" | grep ' valid') || echo '');
+    if [ ! "$is_valid" ] || [ $(xmlstarlet sel -N 'gpml=http://pathvisio.org/GPML/2013a' -t -v 'count(/gpml:Pathway/gpml:Group/@GroupRef)' "$f") != "0" ]; then
+      if ! grep "$f" "$INVALID_GPML_LIST"; then
+        echo "$f" >> "$INVALID_GPML_LIST"
+      fi
+    else
+      dir_f=$(dirname "$f")
+      base_f=$(basename -- "$f")
+      ext_f="${base_f##*.}"
+      stub_f="${base_f%.*}"
+      prefix="$dir_f/$stub_f"
+      svg_f="$prefix.svg"
+      reactsvg_f="$prefix.react.svg"
+
+      if [ -s "$svg_f" ] && [ -s "$reactsvg_f" ]; then
+        echo "$f" >> "$CONVERTED_GPML_LIST"
+      elif [ -f "$svg_f" ] || [ -f "$reactsvg_f" ]; then
+        if [ -f "$svg_f" ]; then
+          echo "Removing empty file: $svg_f"
+  	  sudo rm -f "$svg_f"
+        fi
+        if [ -f "$reactsvg_f" ]; then
+          echo "Removing empty file: $reactsvg_f"
+  	  sudo rm -f "$reactsvg_f"
+        fi
+      fi
+    fi
+  else
+    echo "Removing empty file: $f"
+    sudo rm -f "$f"
+  fi
+done
+
 # Convert all GPML files that we can
-for f in $(comm -23 <(find /home/wikipathways.org/images/wikipathways/ -name 'WP*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
+for f in $(comm -23 <(find "/home/wikipathways.org/images/wikipathways/" -name 'WP*_*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
   #echo '' | tee -a "$LOG_FILE"
   #echo '------------------------------------------------' | tee -a "$LOG_FILE"
   echo "$f" | tee -a "$LOG_FILE"
