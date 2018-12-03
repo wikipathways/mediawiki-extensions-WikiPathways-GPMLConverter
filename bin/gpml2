@@ -37,29 +37,6 @@ error_exit() {
 trap error_exit ERR
 trap cleanup EXIT INT QUIT TERM
 
-#add_metabolite_patterns() {
-#  json_in="$1"
-#  svg_in="$2"
-#
-#  dir_out=$(dirname "$json_in")
-#  base_out=$(basename -- "$json_in")
-#  ext_out="${base_out##*.}"
-#  stub_out="${base_out%.*}"
-#
-#  metabolite_patterns_css_f="$dir_out/$stub_out.metabolite-patterns.css"
-#  metabolite_patterns_svg_f="$dir_out/$stub_out.metabolite-patterns.svg"
-#  "$SCRIPT_DIR/metabolite-patterns" "$json_in"
-#
-#  sed -i '/<style.*>/{
-#r '"$metabolite_patterns_css_f"'
-#}' "$svg_in"
-#
-#  sed -i '/<g id="jic-defs">/{
-#r /dev/stdin
-#}' "$svg_in" < <(xmlstarlet sel -t -c '/svg/defs/*' "$metabolite_patterns_svg_f")
-#
-#}
-
 # TODO: fix these in pvjs instead of here
 fix_pvjs_bugs() {
   svg_in="$1"
@@ -281,16 +258,32 @@ elif [[ "$ext_out" =~ ^(svg|react)$ ]]; then
   bare_stub_out="${base_out%%.*}"
   all_exts_out="${base_out#*.}"
   second_ext_out="${all_exts_out%.*}"
+  third_extension_out="${second_ext_out%.*}"
+  # TODO: handle .plain.react.svg, .dark.react, .plain.svg, etc. better
+  # For now, assume no inputs specify plain or dark
+  if [ "$third_extension_out" == "react" ]; then
+    third_extension_out="plain"
+    path_out="$dir_out/$bare_stub_out.plain.react.svg"
+  elif [ "$third_extension_out" == "svg" ]; then
+    third_extension_out="plain"
+    path_out="$dir_out/$bare_stub_out.plain.svg"
+  fi
 
   json_f="$dir_out/$bare_stub_out.json"
   "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
+
+  metabolite_patterns_css_f="$dir_out/$bare_stub_out.metabolite-patterns-uri.css"
+  metabolite_patterns_svg_f="$dir_out/$bare_stub_out.metabolite-patterns-uri.svg"
+  "$SCRIPT_DIR/metabolite-patterns-uri" "$json_f"
 
   if [[ "$base_out" =~ (react)$ ]]; then
     #############################
     # SVG > .react
     #############################
-    "$SCRIPT_DIR/gpml2" "$path_in" "$path_out.svg"
-    ln -s "./$base_out.svg" "$path_out";
+    "$SCRIPT_DIR/gpml2" "$path_in" "$dir_out/$bare_stub_out.plain.react.svg"
+    ln -s "./$bare_stub_out.plain.react.svg" "$dir_out/$bare_stub_out.plain.react";
+    ln -s "./$bare_stub_out.plain.react.svg" "$dir_out/$bare_stub_out.react";
+    ln -s "./$bare_stub_out.dark.react.svg" "$dir_out/$bare_stub_out.dark.react";
   elif [[ "$base_out" =~ (react.svg)$ ]]; then
     #############################
     # SVG > react.svg
@@ -302,12 +295,6 @@ elif [[ "$ext_out" =~ ^(svg|react)$ ]]; then
     #pvjs --react --theme "plain" < "$json_f" | xmlstarlet fo -o > "$path_out"
 
     fix_pvjs_bugs "$path_out"
-
-    #add_metabolite_patterns "$json_f" "$path_out"
-
-    metabolite_patterns_css_f="$dir_out/$bare_stub_out.metabolite-patterns-uri.css"
-    metabolite_patterns_svg_f="$dir_out/$bare_stub_out.metabolite-patterns-uri.svg"
-    "$SCRIPT_DIR/metabolite-patterns-uri" "$json_f"
 
 #    sed -i '/<style.*>/{
 #r '"$metabolite_patterns_css_f"'
@@ -331,6 +318,8 @@ r /dev/stdin
 r '"$SCRIPT_DIR/../plain.css"'
 }' "$path_out"
 
+    ln -s "./$bare_stub_out.plain.react.svg" "$dir_out/$bare_stub_out.react.svg";
+
     #############################
     # SVG > .dark.react.svg
     #############################
@@ -344,6 +333,7 @@ r '"$SCRIPT_DIR/../plain.css"'
     sed -i '/<style.*>/{
 r '"$SCRIPT_DIR/../dark.css"'
 }' "$path_out_dark_react"
+
   else
     #############################
     # SVG > .svg
@@ -372,12 +362,6 @@ r '"$SCRIPT_DIR/../dark.css"'
       > "$path_out"
   
     fix_pvjs_bugs "$path_out"
-
-    #add_metabolite_patterns "$json_f" "$path_out"
-
-    metabolite_patterns_css_f="$dir_out/$stub_out.metabolite-patterns.css"
-    metabolite_patterns_svg_f="$dir_out/$stub_out.metabolite-patterns.svg"
-    "$SCRIPT_DIR/metabolite-patterns" "$json_f"
 
     sed -i '/<style.*>/{
 r '"$metabolite_patterns_css_f"'
@@ -491,6 +475,8 @@ r /dev/stdin
     # TODO: how about using these: https://reactome.org/icon-lib
     # for example, mitochondrion: https://reactome.org/icon-lib?f=cell_elements#Mitochondrion.svg
     # They appear to be CC-4.0, which might mean we can't upload them to WM Commons?
+
+    ln -s "./$bare_stub_out.plain.svg" "$dir_out/$bare_stub_out.svg";
 
     #############################
     # SVG > .dark.svg
