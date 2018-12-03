@@ -268,6 +268,10 @@ elif [[ "$ext_out" =~ ^(json|jsonld)$ ]]; then
   fi
 
 elif [[ "$ext_out" =~ ^(svg|react)$ ]]; then
+  #############################
+  # SVG
+  #############################
+
   # TODO: check outputs against these tools:
   # https://search.google.com/structured-data/testing-tool
   # https://webmaster.yandex.com/tools/microtest/
@@ -282,14 +286,20 @@ elif [[ "$ext_out" =~ ^(svg|react)$ ]]; then
   "$SCRIPT_DIR/gpml2" --id "$ID" --pathway-version "$PATHWAY_VERSION" "$path_in" "$json_f"
 
   if [[ "$base_out" =~ (react)$ ]]; then
+    #############################
+    # SVG > .react
+    #############################
     "$SCRIPT_DIR/gpml2" "$path_in" "$path_out.svg"
     ln -s "./$base_out.svg" "$path_out";
   elif [[ "$base_out" =~ (react.svg)$ ]]; then
-    pvjs --react --theme "dark" < "$json_f" | xmlstarlet fo | tail -n +2 > "$path_out"
+    #############################
+    # SVG > react.svg
+    #############################
+    pvjs --react --theme "plain" < "$json_f" | xmlstarlet fo | tail -n +2 > "$path_out"
     # TODO: I should be able to use "xmlstarlet fo -o" instead of "tail -n +2"
     # to omit the xml declaration <?xml version="1.0"?>, but "xmlstarlet fo -o"
     # is giving an error. Strangely, "xmlstarlet fo" does not error.
-    #pvjs --react --theme "dark" < "$json_f" | xmlstarlet fo -o > "$path_out"
+    #pvjs --react --theme "plain" < "$json_f" | xmlstarlet fo -o > "$path_out"
 
     fix_pvjs_bugs "$path_out"
 
@@ -318,10 +328,27 @@ r /dev/stdin
 		  "$path_out"
 
     sed -i '/<style.*>/{
-r '"$SCRIPT_DIR/../dark.css"'
+r '"$SCRIPT_DIR/../plain.css"'
 }' "$path_out"
 
+    #############################
+    # SVG > .dark.react.svg
+    #############################
+    path_out_dark_react="$dir_out/$bare_stub_out.dark.react.svg"
+    cat "$path_out" | xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
+  		  -u "/svg:svg/svg:style/text()" \
+  		  -v "
+" > \
+		  "$path_out_dark_react"
+
+    sed -i '/<style.*>/{
+r '"$SCRIPT_DIR/../dark.css"'
+}' "$path_out_dark_react"
   else
+    #############################
+    # SVG > .svg
+    #############################
+
     # TODO: make the stand-alone SVGs work for upload to WM Commons:
     # https://www.mediawiki.org/wiki/Manual:Coding_conventions/SVG
     # https://commons.wikimedia.org/wiki/Help:SVG
@@ -432,11 +459,11 @@ r /dev/stdin
 		  -v "currentColor" \
 		  "$path_out"
  
+#  		  -u "/svg:svg/@color" \
+#		  -v "black" \
+#		  -u "/svg:svg/svg:g/@color" \
+#		  -v "black" \
     xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
-  		  -u "/svg:svg/@color" \
-		  -v "white" \
-		  -u "/svg:svg/svg:g/@color" \
-		  -v "white" \
 		  -u "/svg:svg/svg:g//svg:text[@stroke-width='0.05px']/@stroke-width" \
 		  -v "0px" \
 		  -d "/svg:svg/svg:g//*/svg:text/@overflow" \
@@ -464,27 +491,50 @@ r /dev/stdin
     # TODO: how about using these: https://reactome.org/icon-lib
     # for example, mitochondrion: https://reactome.org/icon-lib?f=cell_elements#Mitochondrion.svg
     # They appear to be CC-4.0, which might mean we can't upload them to WM Commons?
+
+    #############################
+    # SVG > .dark.svg
+    #############################
+    path_out_dark_svg="$dir_out/$bare_stub_out.dark.svg"
+    cat "$path_out" | xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
+  		  -u "/svg:svg/svg:style/text()" \
+  		  -v "
+" > \
+		  "$path_out_dark_svg"
+
+    sed -i '/<style.*>/{
+r '"$SCRIPT_DIR/../dark.css"'
+}' "$path_out_dark_svg"
+
+    # Invert colors and filters
   
+    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+  		  -u "/svg:svg/@color" \
+		  -v "white" \
+		  -u "/svg:svg/svg:g/@color" \
+		  -v "white" \
+		  "$path_out_dark_svg"
+
     for attr in "color" "fill" "stroke"; do
-      el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@$attr])" "$path_out")
+      el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@$attr])" "$path_out_dark_svg")
       for i in $(seq $el_count); do
-        color=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" "$path_out");
+        color=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" "$path_out_dark_svg");
         inverted_color=$(invert_color $color)
         xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
     		      -u "(/svg:svg/svg:g//*[@$attr])[$i]/@$attr" \
 		      -v "$inverted_color" \
-		      "$path_out";
+		      "$path_out_dark_svg";
       done
     done
-  
-    el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@filter])" "$path_out")
+
+    el_count=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "count(/svg:svg/svg:g//*[@filter])" "$path_out_dark_svg")
     for i in $(seq $el_count); do
-      filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$path_out");
+      filter_value=$(xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -v "(/svg:svg/svg:g//*[@filter])[$i]/@filter" "$path_out_dark_svg");
       inverted_filter_value=$(invert_filter $filter_value)
       xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
   		    -u "(/svg:svg/svg:g//*[@filter])[$i]/@filter" \
 		    -v "$inverted_filter_value" \
-		    "$path_out";
+		    "$path_out_dark_svg";
     done
   
     # clip-path needed because rx and ry don't work in FF or Safari
@@ -577,7 +627,8 @@ r /dev/stdin
 		  -v "1px" \
 		  -u "/svg:svg/svg:g//svg:g[contains(@class,'DataNode')]/svg:g[contains(@typeof, 'State')]/*[contains(@class,'Text')]/@fill" \
 		  -v "black" \
-		  "$path_out"
+		  "$path_out_dark_svg"
+
   fi
 else
   error_exit "Invalid output extension: '$ext_out'"
