@@ -106,6 +106,8 @@ invert_filter() {
   fi
 }
 
+# Not sure what I based this on, but it's similar to this one:
+# https://gist.github.com/cosimo/3760587
 TOP_OPTS=$(getopt -o hv: --long help,version:,id:,pathway-version: \
              -n 'gpml2' -- "$@")
 if [ $? != 0 ] ; then error_exit "Error: Failed to parse options." ; fi
@@ -324,7 +326,7 @@ r '"$SCRIPT_DIR/../plain.css"'
     # SVG > .dark.react.svg
     #############################
     path_out_dark_react="$dir_out/$bare_stub_out.dark.react.svg"
-    cat "$path_out" | xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
+    cat "$path_out" | xmlstarlet ed -O -N svg='http://www.w3.org/2000/svg' \
   		  -u "/svg:svg/svg:style/text()" \
   		  -v "
 " > \
@@ -482,23 +484,14 @@ r /dev/stdin
     # SVG > .dark.svg
     #############################
     path_out_dark_svg="$dir_out/$bare_stub_out.dark.svg"
-    cat "$path_out" | xmlstarlet ed -L -O -N svg='http://www.w3.org/2000/svg' \
-  		  -u "/svg:svg/svg:style/text()" \
-  		  -v "
-" > \
-		  "$path_out_dark_svg"
-
-    sed -i '/<style.*>/{
-r '"$SCRIPT_DIR/../dark.css"'
-}' "$path_out_dark_svg"
 
     # Invert colors and filters
   
-    xmlstarlet ed -L -N svg='http://www.w3.org/2000/svg' \
+    cat "$path_out" | xmlstarlet ed -N svg='http://www.w3.org/2000/svg' \
   		  -u "/svg:svg/@color" \
 		  -v "white" \
 		  -u "/svg:svg/svg:g/@color" \
-		  -v "white" \
+		  -v "white" > \
 		  "$path_out_dark_svg"
 
     for attr in "color" "fill" "stroke"; do
