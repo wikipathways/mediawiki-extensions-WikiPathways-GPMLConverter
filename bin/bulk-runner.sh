@@ -8,6 +8,7 @@ TARGET_FORMAT="$1"
 TARGET_FORMAT="${TARGET_FORMAT:-*}"
 
 TARGET_USER="$USER"
+TARGET_GROUP="wpdevs"
 SOURCE_DIR="$2"
 if [ -z "$SOURCE_DIR" ]; then
   if [ ! -z "$WP_DIR" ] && [ -r "$WP_DIR" ] && [ -w "$WP_DIR" ]; then
@@ -33,8 +34,8 @@ CONVERTED_GPML_LIST="$LOGS_DIR/converted-gpmls.txt"
 LATEST_GPML_VERSION="2013a"
 
 cleanup() {
-  sudo -S chown "$TARGET_USER":wpdevs "$CACHE_DIR"
-  sudo -S chmod 664 "$CACHE_DIR"
+  sudo -S chown -R "$TARGET_USER":"$TARGET_GROUP" "$IMAGES_DIR"
+  #sudo -S chmod -R 664 "$IMAGES_DIR"
 }
 
 # Based on http://linuxcommand.org/lc3_wss0140.php
@@ -71,7 +72,7 @@ touch "$LOG_FILE" "$UNCONVERTIBLE_GPML_LIST" "$INVALID_GPML_LIST" "$CONVERTED_GP
 # TODO: find has an option to call "-exec". Better than a for loop?
 # TODO: a globbing pattern like this might be better:
 # ls -la ./WP[0-9]*[0-9]_[0-9]*[0-9].[a-z][a-z][a-z]
-for f in $(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml'); do
+for f in $(find "$GPML_DIR" -name 'WP*_*.gpml'); do
   if [ -s "$f" ]; then
     # TODO: which is better?
     #xmlstarlet val "$f";
@@ -110,10 +111,11 @@ for f in $(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml'); do
 done
 
 # Delete broken symlinks
-find "$IMAGES_WP_DIR" -name "WP*_*.*" -xtype l -delete
+find "$GPML_DIR" -name "WP*_*.*" -xtype l -delete
+find "$CACHE_DIR" -name "*.cdkdepict.svg" -xtype l -delete
 
 # Convert all GPML files that we can
-for f in $(comm -23 <(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
+for f in $(comm -23 <(find "$GPML_DIR" -name 'WP*_*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
   #echo '' | tee -a "$LOG_FILE"
   #echo '------------------------------------------------' | tee -a "$LOG_FILE"
   echo "$f" | tee -a "$LOG_FILE"
@@ -138,14 +140,16 @@ for f in $(comm -23 <(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml' | sort -u) <(cat 
     #sudo -S -i "$SCRIPT_DIR/gpml2" "$f" 2> >(tee -a "$LOG_FILE" >&2);
     sudo -S -i "$SCRIPT_DIR/gpml2" "$f" 2>> "$LOG_FILE";
   else
-    # Convert only as needed to get dynamic SVGs:
-    #sudo -S -i "$SCRIPT_DIR/gpml2" "$f" "$prefix.react" 2> >(tee -a "$LOG_FILE" >&2);
-    sudo -S -i "$SCRIPT_DIR/gpml2" "$f" "$prefix.react" 2>> "$LOG_FILE";
+    # Convert minimum required to get specified format:
+    sudo -S -i "$SCRIPT_DIR/gpml2" "$f" "$prefix.$TARGET_FORMAT" 2>> "$LOG_FILE";
   fi
  
   # Make file permissions match what normal conversion would generate
-  sudo -S chown "$TARGET_USER":"$TARGET_USER" "$prefix"*
-  sudo -S chmod 644 "$prefix"*
+  sudo -S chown "$TARGET_USER":"$TARGET_GROUP" "$prefix"*
+  sudo -S chmod 664 "$prefix"*
+
+  sudo -S chown "$TARGET_USER":"$TARGET_GROUP" "$CACHE_DIR"/*
+  sudo -S chmod 664 "$CACHE_DIR"/*
 
   echo "$f" >> "$CONVERTED_GPML_LIST"
 done
