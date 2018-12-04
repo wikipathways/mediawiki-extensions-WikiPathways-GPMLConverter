@@ -13,7 +13,7 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
-if sudo echo 'Starting...'
+if sudo -S echo 'Starting...'
 then
     nohup "$SCRIPT_DIR/bulk-runner.sh" "$@" &
 fi
