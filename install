@@ -10,7 +10,7 @@ exit_if_not_installed() { is_installed $1 || { echo >&2 "I require $1 but it's n
 function ensure_installed() {
 	if ! is_installed $1 ; then
 		echo "Installing missing dependency $1...";
-		$2;
+		eval $2;
 	fi
 }
 
