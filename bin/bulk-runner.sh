@@ -4,17 +4,27 @@
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
 
-CACHE_DIR="$dir_out"
-LOGS_DIR="$dir_out/logs"
+TARGET_FORMAT="$1"
+TARGET_FORMAT="${TARGET_FORMAT:-*}"
+
 TARGET_USER="$USER"
-if [ ! -z "$WP_DIR" ] && [ -r "$WP_DIR" ] && [ -w "$WP_DIR" ]; then
-  CACHE_DIR="$WP_DIR/images/metabolite-pattern-cache"
-  LOGS_DIR="$WP_DIR/logs"
-  TARGET_USER='www-data'
-elif [ ! -z "$HOME" ]; then
-  CACHE_DIR="$HOME/metabolite-pattern-cache"
-  LOGS_DIR="$HOME/bulk-gpml2-logs"
+SOURCE_DIR="$2"
+if [ -z "$SOURCE_DIR" ]; then
+  if [ ! -z "$WP_DIR" ] && [ -r "$WP_DIR" ] && [ -w "$WP_DIR" ]; then
+    SOURCE_DIR="$WP_DIR"
+    TARGET_USER='www-data'
+  elif [ ! -z "$PWD" ] && [ -r "$PWD" ] && [ -w "$PWD" ]; then
+    SOURCE_DIR="$PWD"
+  elif [ ! -z "$HOME" ]; then
+    SOURCE_DIR="$HOME"
+  fi
 fi
+
+IMAGES_DIR="$SOURCE_DIR/images"
+CACHE_DIR="$IMAGES_DIR/metabolite-pattern-cache"
+GPML_DIR="$IMAGES_DIR/wikipathways"
+
+LOGS_DIR="$SOURCE_DIR/logs"
 LOG_FILE="$LOGS_DIR/bulk-gpml2.log"
 INVALID_GPML_LIST="$LOGS_DIR/invalid-gpmls.txt"
 UNCONVERTIBLE_GPML_LIST="$LOGS_DIR/unconvertible-gpmls.txt"
@@ -53,9 +63,6 @@ trap error_exit ERR
 # SIGHUP SIGINT SIGTERM
 trap cleanup EXIT INT QUIT TERM
 
-TARGET_FORMAT="$1"
-TARGET_FORMAT="${TARGET_FORMAT:-*}"
-
 mkdir -p "$CACHE_DIR"
 mkdir -p "$LOGS_DIR"
 rm -f "$INVALID_GPML_LIST" "$CONVERTED_GPML_LIST"
@@ -64,7 +71,7 @@ touch "$LOG_FILE" "$UNCONVERTIBLE_GPML_LIST" "$INVALID_GPML_LIST" "$CONVERTED_GP
 # TODO: find has an option to call "-exec". Better than a for loop?
 # TODO: a globbing pattern like this might be better:
 # ls -la ./WP[0-9]*[0-9]_[0-9]*[0-9].[a-z][a-z][a-z]
-for f in $(find "/home/wikipathways.org/images/wikipathways/" -name 'WP*_*.gpml'); do
+for f in $(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml'); do
   if [ -s "$f" ]; then
     # TODO: which is better?
     #xmlstarlet val "$f";
@@ -102,8 +109,11 @@ for f in $(find "/home/wikipathways.org/images/wikipathways/" -name 'WP*_*.gpml'
   fi
 done
 
+# Delete broken symlinks
+find "$IMAGES_WP_DIR" -name "WP*_*.*" -xtype l -delete
+
 # Convert all GPML files that we can
-for f in $(comm -23 <(find "/home/wikipathways.org/images/wikipathways/" -name 'WP*_*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
+for f in $(comm -23 <(find "$IMAGES_WP_DIR" -name 'WP*_*.gpml' | sort -u) <(cat "$INVALID_GPML_LIST" "$UNCONVERTIBLE_GPML_LIST" "$CONVERTED_GPML_LIST" | sort -u)); do
   #echo '' | tee -a "$LOG_FILE"
   #echo '------------------------------------------------' | tee -a "$LOG_FILE"
   echo "$f" | tee -a "$LOG_FILE"

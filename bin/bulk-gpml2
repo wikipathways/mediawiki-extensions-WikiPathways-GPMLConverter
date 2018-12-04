@@ -15,5 +15,5 @@ SCRIPT_DIR=$(get_script_dir)
 
 if sudo echo 'Starting...'
 then
-    nohup "$SCRIPT_DIR/bulk-runner.sh" &
+    nohup "$SCRIPT_DIR/bulk-runner.sh" "$@" &
 fi
