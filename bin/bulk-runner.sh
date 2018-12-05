@@ -89,18 +89,18 @@ for f in $(find "$GPML_DIR" -name 'WP*_*.gpml'); do
       stub_f="${base_f%.*}"
       prefix="$dir_f/$stub_f"
       svg_f="$prefix.svg"
-      reactsvg_f="$prefix.react.svg"
+      pvjssvg_f="$prefix.pvjssvg"
 
-      if [ -s "$svg_f" ] && [ -s "$reactsvg_f" ]; then
+      if [ -s "$svg_f" ] && [ -s "$pvjssvg_f" ]; then
         echo "$f" >> "$CONVERTED_GPML_LIST"
-      elif [ -f "$svg_f" ] || [ -f "$reactsvg_f" ]; then
+      elif [ -f "$svg_f" ] || [ -f "$pvjssvg_f" ]; then
         if [ -f "$svg_f" ]; then
           echo "Removing empty file: $svg_f"
   	  sudo rm -f "$svg_f"
         fi
-        if [ -f "$reactsvg_f" ]; then
-          echo "Removing empty file: $reactsvg_f"
-  	  sudo rm -f "$reactsvg_f"
+        if [ -f "$pvjssvg_f" ]; then
+          echo "Removing empty file: $pvjssvg_f"
+  	  sudo rm -f "$pvjssvg_f"
         fi
       fi
     fi
@@ -110,7 +110,13 @@ for f in $(find "$GPML_DIR" -name 'WP*_*.gpml'); do
   fi
 done
 
-# Delete broken symlinks
+# Delete broken symlinks.
+# Note: we only want to find _broken_ symlinks, so be careful here.
+# The -L or -follow option can change the behavior.
+# The following two commands both appear to find only broken symlinks:
+#   find ./ -xtype l
+#   find -L ./ -type l
+# See https://stackoverflow.com/a/8513194
 find "$GPML_DIR" -name "WP*_*.*" -xtype l -delete
 find "$CACHE_DIR" -name "*.cdkdepict.svg" -xtype l -delete
 
