@@ -18,6 +18,9 @@ echo "Installing/Updating GPMLConverter"
 
 echo "Ensuring dependencies are installed...";
 
+exit_if_not_installed "sudo";
+ensure_installed "curl" "sudo apt install curl";
+
 # Install multi-user Nix. See https://nixos.org/nix/manual/#sect-multi-user-installation
 ensure_installed "nix-env" "sh <(curl https://nixos.org/nix/install) --daemon";
 
