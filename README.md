@@ -1,46 +1,29 @@
 # GPMLConverter
 
-## How to Install
+## Install
 
-1. Clone Repo
+### As an extension in production
+
+1. Clone repo and submodule repos
 
 ```sh
 $ git submodule add https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
 $ cd GPMLConverter
+$ git submodule update -q --init --recursive
 ```
 
-Note: this is the SSH URL, which you can use as an alternative to the HTTPS URL:
-> git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git
-
-2. Install GPMLConverter Dependencies
+2. Install GPMLConverter dependencies
 
 ```sh
 $ sudo -i bash "$(pwd)/install"
 ```
 
-### Install for Development
+### For development
 
 ```sh
 $ git clone --recurse-submodules git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
+$ cd GPMLConverter
 ```
-
-### Troubleshooting
-
-#### Not enough space
-
-On the VM for vm1.wikipathways.org, not enough space was allocated for `/nix`.
-To get around this problem, I had to take these steps before installing:
-
-```
-sudo mount -o bind /home/wikipathways/nix /nix
-```
-
-Comment out lines of 327 to 335 of file `nix-2.1.3-x86_64-linux/install-multi-user`
-and then install Nix.
-
-#### Too many files open
-
-After installing Nix, try running `bash ./import.sh` instead of `nix-env -f default -i`.
 
 ## How to Use
 Try converting some data.
@@ -91,3 +74,21 @@ xmlstarlet ed -N svg='http://www.w3.org/2000/svg' -m '/svg:svg/svg:g/svg:g[conta
 
 rm WP2868_98142.*; ./bin/gpml2 /home/wikipathways.org/images/wikipathways/a/a4/WP2868_98142.gpml WP2868_98142.svg
 ```
+
+## Troubleshooting
+
+#### Not enough space
+
+On the VM for vm1.wikipathways.org, not enough space was allocated for `/nix`.
+To get around this problem, I had to take these steps before installing:
+
+```
+sudo mount -o bind /home/wikipathways/nix /nix
+```
+
+Comment out lines of 327 to 335 of file `nix-2.1.3-x86_64-linux/install-multi-user`
+and then install Nix.
+
+#### Too many files open
+
+After installing Nix, try running `bash ./import.sh` instead of `nix-env -f default -i`.
