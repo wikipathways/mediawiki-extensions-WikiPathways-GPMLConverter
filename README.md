@@ -2,6 +2,12 @@
 
 ## Install
 
+Installation assumes basic utilities are installed. If this is an absolutely minimal installation of Ubuntu, run this step first:
+
+```sh
+apt install git-all sudo
+```
+
 ### As an extension in production
 
 1. Clone repo and submodule repos
@@ -17,6 +23,11 @@ $ git submodule update -q --init --recursive
 ```sh
 $ sudo -i bash "$(pwd)/install"
 ```
+
+Responses to give to prompts:
+* Would you like to see a more detailed list of what we will do?: `n`
+* Can we use sudo?: `y`
+* Ready to continue?: `y`
 
 ### For development
 
