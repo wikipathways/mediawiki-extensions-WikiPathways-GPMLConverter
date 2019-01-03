@@ -1,69 +1,14 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
+
+# This file is a wrapper for "$CURRENT_SCRIPT-wrapped.sh".
+# It asks the user to prove sudo rights before it runs.
 
 # see https://stackoverflow.com/a/246128/5354298
 get_script_dir() { echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"; }
 SCRIPT_DIR=$(get_script_dir)
+CURRENT_SCRIPT="$(basename "$0")"
 
-# see https://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
-is_installed() { hash $1 2>/dev/null || { false; } }
-exit_if_not_installed() { is_installed $1 || { echo >&2 "I require $1 but it's not installed. Aborting. See https://nixos.org/nix/manual/#sec-prerequisites-source."; exit 1; } }
-function ensure_installed() {
-	if ! is_installed $1 ; then
-		echo "Installing missing dependency $1...";
-		eval $2;
-	fi
-}
-
-echo "Installing/Updating GPMLConverter"
-
-echo "Ensuring dependencies are installed...";
-
-exit_if_not_installed "sudo";
-ensure_installed "curl" "sudo apt install curl";
-ensure_installed "rsync" "sudo apt install rsync";
-
-# Install multi-user Nix. See https://nixos.org/nix/manual/#sect-multi-user-installation
-ensure_installed "nix-env" "sh <(curl https://nixos.org/nix/install) --daemon";
-
-echo "Ensuring Nix is up to date...";
-sudo -i su -c "nix-channel --update"
-
-echo "Installing/Updating GPMLConverter dependencies...";
-sudo -i su -c "nix-env -f $SCRIPT_DIR/default.nix -i"
-
-envvars_path="$SCRIPT_DIR/envvars";
-echo "export PATH=\"$SCRIPT_DIR/bin:/nix/var/nix/profiles/default/bin:\$PATH\"" > "$envvars_path";
-
-echo '';
-echo "Add the following line to /etc/apache2/envvars, if not already present:";
-echo ". $envvars_path";
-echo "Then restart Apache:";
-echo "sudo apachectl restart";
-echo '';
-
-#APACHE_ENV_VARS_PATH="/etc/apache2/envvars";
-#NIX_BIN_PATH_GLOBAL="/root/.nix-profile/bin";
-#if ! cat $APACHE_ENV_VARS_PATH | grep $NIX_BIN_PATH_GLOBAL; then
-#	echo '' >> $APACHE_ENV_VARS_PATH;
-#	echo '# Added to allow WikiPathways to access CLI tools installed via nix.' >> $APACHE_ENV_VARS_PATH;
-#	echo "PATH=\$PATH:$NIX_BIN_PATH_GLOBAL" >> $APACHE_ENV_VARS_PATH;
-#fi
-
-#echo "Creating symlink to browser version of pvjs.js";
-#executable_pvjs_symlink=`which pvjs`;
-#executable_pvjs=`readlink $executable_pvjs_symlink`;
-#executable_pvjs_dir="`dirname $executable_pvjs`/..";
-#browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
-#browser_pvjs_symlink="./modules/pvjs.vanilla.js";
-#rm -f "$browser_pvjs_symlink";
-#ln -s "$browser_pvjs" "$browser_pvjs_symlink";
-#
-#echo "Symlink created:";
-#echo `ls -l $browser_pvjs_symlink`;
-
-echo "Success! GPMLConverter installed/updated."
-echo ''
-echo "If you want to save space, you can run these commands:"
-echo 'sudo -i su -c "nix-collect-garbage -d"'
-echo 'nix-collect-garbage -d'
-echo 'nix-store --optimise'
+if sudo -S echo 'sudo rights confirmed'
+then
+    "$SCRIPT_DIR/$CURRENT_SCRIPT-wrapped.sh" "$@"
+fi
