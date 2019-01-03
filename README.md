@@ -94,11 +94,15 @@ On the VM for vm1.wikipathways.org, not enough space was allocated for `/nix`.
 To get around this problem, I had to take these steps before installing:
 
 ```
+sudo mkdir -p /nix
+sudo mkdir -p /home/wikipathways/nix
 sudo mount -o bind /home/wikipathways/nix /nix
+bash install-nix-mounted --daemon
+./install wikipathways
 ```
 
-Comment out lines of 327 to 335 of file `nix-2.1.3-x86_64-linux/install-multi-user`
-and then install Nix.
+The customized install script `install-nix-mounted` disables the check for the existence of
+`/nix` on lines of 327 to 335 of file `nix-2.1.3-x86_64-linux/install-multi-user`.
 
 #### Too many files open
 
