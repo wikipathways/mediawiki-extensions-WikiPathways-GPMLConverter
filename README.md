@@ -2,39 +2,39 @@
 
 ## Install
 
-Installation assumes basic utilities are installed. If this is an absolutely minimal installation of Ubuntu, run this step first:
+Installation assumes basic utilities like `sudo` and `git` are installed. If they are not, install them first, e.g., for an absolutely minimal installation of Ubuntu, run:
 
 ```sh
-apt install git-all sudo
+apt install sudo getent git-all
 ```
 
-### As an extension in production
-
-1. Clone repo and submodule repos
+1. Clone repo and submodule repos. You can either install as a Mediawiki extension:
 
 ```sh
+$ cd /home/wikipathways.org/extensions # or wherever your extensions directory is located
 $ git submodule add https://github.com/wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
 $ cd GPMLConverter
 $ git submodule update -q --init --recursive
 ```
 
-2. Install GPMLConverter dependencies
-
-```sh
-$ sudo -i bash "$(pwd)/install"
-```
-
-Responses to give to prompts:
-* Would you like to see a more detailed list of what we will do?: `n`
-* Can we use sudo?: `y`
-* Ready to continue?: `y`
-
-### For development
+Or install as a standalone utility (for example, during development):
 
 ```sh
 $ git clone --recurse-submodules git@github.com:wikipathways/mediawiki-extensions-WikiPathways-GPMLConverter.git GPMLConverter
 $ cd GPMLConverter
 ```
+
+2. Install GPMLConverter dependencies
+
+```sh
+$ "$(pwd)/install" wikipathways
+```
+
+Responses to give to prompts:
+* Do you want to continue?: `Y`
+* Would you like to see a more detailed list of what we will do?: `n`
+* Can we use sudo?: `y`
+* Ready to continue?: `y`
 
 ## How to Use
 Try converting some data.
