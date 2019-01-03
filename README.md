@@ -2,11 +2,7 @@
 
 ## Install
 
-Installation assumes basic utilities like `sudo` and `git` are installed. If they are not, install them first, e.g., for an absolutely minimal installation of Ubuntu, run:
-
-```sh
-apt install sudo getent git-all
-```
+Installation assumes basic utilities like `sudo`, `getent` and `git` are installed. If they are not, install them first.
 
 1. Clone repo and submodule repos. You can either install as a Mediawiki extension:
 
