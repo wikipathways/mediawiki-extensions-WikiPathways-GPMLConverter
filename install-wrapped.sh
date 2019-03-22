@@ -148,15 +148,6 @@ fi
 #	echo "PATH=\$PATH:$NIX_BIN_PATH_GLOBAL" >> $APACHE_ENV_VARS_PATH;
 #fi
 
-if [ -e "./modules/pvjs.vanilla.js" ]; then
-	executable_pvjs_symlink=$(which pvjs);
-	executable_pvjs=$(readlink $executable_pvjs_symlink);
-	executable_pvjs_dir="$(dirname $executable_pvjs)/..";
-	browser_pvjs_dir=$(readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist");
-	printf "\n\e[1;33mTo enable browser version of pvjs, copy the files like this:\e[0m\n"
-	echo "cp $browser_pvjs_dir/* ./modules/"
-	printf "\n\e[1;33mAnd ensure the permissions are set correctly.\e[0m\n"
-
 # TODO: do we want to symlink or copy?
 #	#echo "Creating symlink to browser version of pvjs.js";
 #	executable_pvjs_symlink=`which pvjs`;
@@ -169,9 +160,15 @@ if [ -e "./modules/pvjs.vanilla.js" ]; then
 #
 #	echo "Symlink created:";
 #	echo `ls -l $browser_pvjs_symlink`;
-fi
 
 printf "\e[1;32mSuccess! GPMLConverter installed/updated.\e[0m\n"
+
+executable_pvjs_symlink=$(sudo -u $TARGET_USER -i which pvjs);
+executable_pvjs=$(sudo -u $TARGET_USER -i readlink $executable_pvjs_symlink);
+executable_pvjs_dir="$(dirname $executable_pvjs)/..";
+browser_pvjs_dir=$(sudo -u $TARGET_USER -i readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist");
+printf "\n\e[1;33mTo enable/update browser version of pvjs, copy JS files into ./modules (check that permissions are set correctly):\e[0m\n"
+echo "rm -rf ./modules; mkdir -p ./modules; cp $browser_pvjs_dir/* ./modules/"
 
 # TODO: should we set PATH like this?
 # should apache be able to use every utility installed for the default profile?
