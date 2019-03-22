@@ -60,6 +60,12 @@ An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored 
 
 ## Troubleshooting
 
+To remove cache:
+```
+find /var/www/wikipathways/images/ -wholename "*images/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.json" -delete
+find /var/www/wikipathways/images/ -wholename "*images/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.svg" -delete
+```
+
 #### Not enough space
 
 On the VM for vm1.wikipathways.org, not enough space was allocated for `/nix`.
