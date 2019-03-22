@@ -1,4 +1,4 @@
-pvjs.js
 envvars
 vendor
 composer.lock
+modules/

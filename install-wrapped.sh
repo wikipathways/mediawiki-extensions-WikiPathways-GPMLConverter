@@ -30,15 +30,15 @@ if [ ! -d "/nix" ]; then
 		printf "\e[1;31merror\e[0m: could not install nix\n";
 		exit 1;
 	fi
+fi
 
-#	# TODO: this was giving me errors
-#	# Restrict access to Nix operations to root and a group called nix-users.
-#	# see https://nixos.org/nix/manual/#idm140737318344544
-#	if ! getent group "nix-users" > /dev/null; then
-#		sudo groupadd -r nix-users
-#		sudo chgrp nix-users /nix/var/nix/daemon-socket
-#		sudo chmod ug=rwx,o= /nix/var/nix/daemon-socket
-#	fi
+# TODO: this was giving me errors
+# Restrict access to Nix operations to root and a group called nix-users.
+# see https://nixos.org/nix/manual/#idm140737318344544
+if ! getent group "nix-users" > /dev/null; then
+	sudo groupadd -r nix-users
+	sudo chgrp nix-users /nix/var/nix/daemon-socket
+	sudo chmod ug=rwx,o= /nix/var/nix/daemon-socket
 fi
 
 TARGET_USER="$1"
@@ -81,8 +81,16 @@ fi
 #echo "if [ -e \"/usr/local/etc/profile.d/nix.sh\" ]; then . \"/usr/local/etc/profile.d/nix.sh\"; fi" >> "$TARGET_USER_HOME/.profile"
 #echo "if [ -e \"$TARGET_USER_HOME/.nix-profile/etc/profile.d/nix.sh\" ]; then . \"$TARGET_USER_HOME/.nix-profile/etc/profile.d/nix.sh\"; fi" >> "$TARGET_USER_HOME/.profile"
 
+# TODO
+#sudo chown wikipathways:wikipathways /home/wikipathways/
 sudo usermod -a -G nix-users "$TARGET_USER"
-sudo -u $TARGET_USER -i touch '$HOME/.profile'
+TARGET_USER_HOME_PROFILE="$TARGET_USER_HOME/.profile"
+if [ ! -e "$TARGET_USER_HOME_PROFILE" ]; then
+	sudo touch "$TARGET_USER_HOME_PROFILE"
+	sudo chown "$TARGET_USER":"$TARGET_USER" "$TARGET_USER_HOME_PROFILE"
+	sudo chmod u+rw "$TARGET_USER_HOME_PROFILE"
+fi
+
 if ! grep nix-setup-user "$TARGET_USER_HOME/.profile" > /dev/null; then
 	echo "" | sudo -u wikipathways -i tee -a '$HOME/.profile' > /dev/null
 	echo "# Added by nix-setup-user" | sudo -u wikipathways -i tee -a '$HOME/.profile' > /dev/null
@@ -112,12 +120,23 @@ fi
 #echo "if [ -e \"/usr/local/etc/profile.d/nix.sh\" ]; then . \"/usr/local/etc/profile.d/nix.sh\"; fi" >> "$TARGET_USER_HOME/.profile"
 #echo "if [ -e \"$TARGET_USER_HOME/.nix-profile/etc/profile.d/nix.sh\" ]; then . \"$TARGET_USER_HOME/.nix-profile/etc/profile.d/nix.sh\"; fi" >> "$TARGET_USER_HOME/.profile"
 
-echo "installing/updating GPMLConverter dependencies...";
+echo "installing/updating GPMLConverter...";
 # Currently installing as root, hoping that means it'll always be available as default.
 # TODO: what is the default profile vs. the root profile?
 # TODO: should/can we create an apache user and install as that user instead?
 if ! sudo -u $TARGET_USER -i nix-env -f $SCRIPT_DIR/default.nix -i ; then
-	printf "\e[1;31merror\e[0m: could not install GPMLConverter\n";
+	printf "\e[1;31merror\e[0m: could not install/update GPMLConverter\n";
+	exit 1;
+fi
+
+#printf "\e[1;32mreducing Nix disk space usage...\e[0m\n"
+echo "Reducing Nix disk space usage..."
+if ! sudo -u $TARGET_USER -i nix-collect-garbage -d ; then
+	printf "\e[1;31merror\e[0m: nix-collect-garbage -d failed\n";
+	exit 1;
+fi
+if ! sudo -u $TARGET_USER -i nix-store --optimise ; then
+	printf "\e[1;31merror\e[0m: nix-store --optimise\n";
 	exit 1;
 fi
 
@@ -129,23 +148,30 @@ fi
 #	echo "PATH=\$PATH:$NIX_BIN_PATH_GLOBAL" >> $APACHE_ENV_VARS_PATH;
 #fi
 
-#echo "Creating symlink to browser version of pvjs.js";
-#executable_pvjs_symlink=`which pvjs`;
-#executable_pvjs=`readlink $executable_pvjs_symlink`;
-#executable_pvjs_dir="`dirname $executable_pvjs`/..";
-#browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.js"`;
-#browser_pvjs_symlink="./modules/pvjs.vanilla.js";
-#rm -f "$browser_pvjs_symlink";
-#ln -s "$browser_pvjs" "$browser_pvjs_symlink";
+if [ -e "./modules/pvjs.vanilla.js" ]; then
+	executable_pvjs_symlink=$(which pvjs);
+	executable_pvjs=$(readlink $executable_pvjs_symlink);
+	executable_pvjs_dir="$(dirname $executable_pvjs)/..";
+	browser_pvjs_dir=$(readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist");
+	printf "\n\e[1;33mTo enable browser version of pvjs, copy the files like this:\e[0m\n"
+	echo "cp $browser_pvjs_dir/* ./modules/"
+	printf "\n\e[1;33mAnd ensure the permissions are set correctly.\e[0m\n"
+
+# TODO: do we want to symlink or copy?
+#	#echo "Creating symlink to browser version of pvjs.js";
+#	executable_pvjs_symlink=`which pvjs`;
+#	executable_pvjs=`readlink $executable_pvjs_symlink`;
+#	executable_pvjs_dir="`dirname $executable_pvjs`/..";
+#	browser_pvjs=`readlink -f "$executable_pvjs_dir/@wikipathways/pvjs/dist/pvjs.vanilla.js"`;
+#	browser_pvjs_symlink="./modules/pvjs.vanilla.js";
+#	rm -f "$browser_pvjs_symlink";
+#	ln -s "$browser_pvjs" "$browser_pvjs_symlink";
 #
-#echo "Symlink created:";
-#echo `ls -l $browser_pvjs_symlink`;
+#	echo "Symlink created:";
+#	echo `ls -l $browser_pvjs_symlink`;
+fi
 
 printf "\e[1;32mSuccess! GPMLConverter installed/updated.\e[0m\n"
-printf "\e[1;32m(optional) Reduce Nix disk space usage:\e[0m\n"
-echo 'sudo -i su -c "nix-collect-garbage -d"'
-echo 'nix-collect-garbage -d'
-echo 'nix-store --optimise'
 
 # TODO: should we set PATH like this?
 # should apache be able to use every utility installed for the default profile?
@@ -157,4 +183,6 @@ echo "export PATH=\"$SCRIPT_DIR/bin:$TARGET_USER_HOME/.nix-profile/bin:\$PATH\""
 printf "\n\e[1;33mTo enable for Apache, add the following line to /etc/apache2/envvars (if not already present):\e[0m\n"
 echo ". $envvars_path"
 printf "\e[1;33mThen restart Apache:\e[0m\n"
-echo "sudo apachectl restart"
+# TODO: restart seems to not make the env vars show up, but stop followed by start does. Why?
+#echo "sudo apachectl restart"
+echo "sudo apachectl stop; sudo apachectl start"
