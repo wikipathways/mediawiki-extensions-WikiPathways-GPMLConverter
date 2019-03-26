@@ -2,4 +2,4 @@ envvars
 vendor
 composer.lock
 uninstall-nix.sh
-modules/
+modules/*
