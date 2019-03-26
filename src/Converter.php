@@ -40,6 +40,7 @@ class Converter {
 	 * @param string $format json or whatever
 	 */
 	public function __construct( $pathwayID, $format = "json" ) {
+		# TODO: are we using pathwayID and/or format with the constructor anywhere?
 		$this->pathwayID = $pathwayID;
 		$this->format = $format;
 	}
@@ -47,6 +48,7 @@ class Converter {
 	/**
 	 * @param string $name where to write
 	 */
+	# TODO: are we using this anywhere?
 	public function setOutput( $name ) {
 		$this->outfh = fopen( $name );
 	}
@@ -60,50 +62,6 @@ class Converter {
 		self::$identifier = escapeshellarg( $opts["identifier"] );
 		self::$version = escapeshellarg( $opts["version"] );
 	}
-
-#	private static function getToPvjsonCmd( array $opts ) {
-#		self::setup( $opts );
-#
-#		return sprintf(
-#			'gpml2pvjson --id %s --pathway-version %s',
-#			self::$identifier, self::$version
-#		);
-#
-#	}
-#
-#	private static function getPvjsonOutput( $gpml, $opts ) {
-#		// TODO: this timeout should be updated or removed when we get async caching working
-#		$toPvjsonCmd = self::getToPvjsonCmd( $opts );
-#		$streamGpml2Pvjson = ConvertStream::createStream( $toPvjsonCmd, [ "timeout" => 10 ] );
-#		if ( !$streamGpml2Pvjson ) {
-#			$err = error_get_last();
-#			throw new MWException(
-#				"Error Converting GPML to PVJSON: "
-#				. $err["message"] . " (" . $err["file"] . ":" . $err["line"] . ")"
-#			);
-#			return '';
-#		}
-#		return $streamGpml2Pvjson( $gpml, true );
-#	}
-#
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string|bool false if an error
-#	 */
-#	public function gpml2pvjson( $gpml, $opts ) {
-#		if ( !$gpml ) {
-#			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
-#			return false;
-#		}
-#		try {
-#			$rawPvjsonString = self::getPvjsonOutput( $gpml, $opts );
-#		} catch ( Exception $e ) {
-#			wfDebugLog( 'GPMLConverter', "Error converting GPML to PVJSON: " . $e->getMessage() );
-#			return false;
-#		}
-#		return $rawPvjsonString;
-#	}
 
 	/**
 	 * Convert the given GPML file to another file format.
@@ -145,8 +103,6 @@ class Converter {
 		$cmd = sprintf(
 			'gpml2 --id %s --pathway-version %s %s %s',
 			self::$identifier, self::$version, $gpmlFile, $outFile);
-		# TODO: should we be using '2>&1'?
-		#$cmd = " '$gpmlFile' '$outFile' 2>&1";
 
 		wfDebugLog( __METHOD__,  "CONVERTER: $cmd\n" );
 		$msg = wfShellExec( $cmd, $status, [], [ 'memory' => 0 ] );
@@ -164,154 +120,4 @@ class Converter {
 		}
 		return true;
 	}
-
-
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param string $outputFormat file name extension
-#	 * @param integer|null $scale percent of original. Min 100. Only for GPML to PNG.
-#	 * @return string
-#	 */
-#	public function convertWithPathVisio( $input, $outputFormat, $scale = null ) {
-#
-#		if ( !$input ) {
-#			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
-#			return false;
-#		}
-#
-#		try{
-#			$tmp_in = tempnam(sys_get_temp_dir(), "pathvisio-");
-#			$tmp_path_in = $tmp_in . '.gpml';
-#			rename($tmp_in, $tmp_path_in);
-#			file_put_contents($tmp_path_in, $input);
-#
-#			$tmp_path_out = $tmp_path_in . "." . $outputFormat;
-#
-#			$cmd = sprintf(
-#				'pathvisio convert %s %s',
-#				$tmp_path_in, $tmp_path_out
-#			);
-#			if (is_int(ctype_digit(strval($scale)))) {
-#				$cmd .= ' ' . strval($scale);
-#			}
-#			$cmd .= ' 2>&1';
-#
-#			#$msg = exec( $cmd );
-#			$last_line = exec( $cmd, $msg, $status );
-#
-#			if ( $status != 0 ) {
-#				throw new MWException(
-#					"Unable to convert to $outFormat:\n\nStatus: $status\n\nMessage: $msg\n\n"
-#					. "Command: $cmd"
-#				);
-#				wfDebugLog( __METHOD__,
-#					"Unable to convert to $outFormat: Status: $status   Message:$msg  "
-#					. "Command: $cmd"
-#				);
-#			} else {
-#				wfDebugLog( __METHOD__, "Convertible: $cmd" );
-#			}
-#
-#			unlink($tmp_path_in);
-#
-#			$result = '';
-#			if (file_exists($tmp_path_out)) {
-#				$result = file_get_contents( $tmp_path_out );
-#				unlink($tmp_path_out);
-#			} else {
-#				wfDebugLog( "The file $tmp_path_out does not exist" );
-#			}
-#
-#			return $result;
-#		} catch ( Exception $e ) {
-#			wfDebugLog( __METHOD__, "Error converting GPML to $outputFormat:" );
-#			wfDebugLog( __METHOD__, $e );
-#			wfDebugLog( __METHOD__, "\n" );
-#			return;
-#		}
-#	}
-
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getGpml2txt( $input, $opts ) {
-#		return self::convertWithPathVisio($input, "txt");
-#	}
-#
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getGpml2png( $input, $opts = [] ) {
-#		$scaleOpt = isset( $opts["scale"] )
-#				  ? $opts["scale"]
-#				  : 100;
-#
-#		return self::convertWithPathVisio($input, "png", $scaleOpt);
-#	}
-#
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getGpml2owl( $input, $opts ) {
-#		return self::convertWithPathVisio($input, "owl");
-#	}
-#
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getGpml2pdf( $input, $opts ) {
-#		return self::convertWithPathVisio($input, "pdf");
-#	}
-#
-#	/**
-#	 * @param string $gpml XML of the gpml
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getGpml2pwf( $input, $opts ) {
-#		return self::convertWithPathVisio($input, "pwf");
-#	}
-#
-#	/**
-#	 * @param string $pvjson JSON equiv of pv
-#	 * @param array $opts options
-#	 * @return string
-#	 */
-#	public function getPvjson2svg( $pvjson, $opts ) {
-#
-#		if ( empty( $pvjson ) || trim( $pvjson ) == '{}' ) {
-#			wfDebugLog( __METHOD__, "Error: invalid pvjson provided\n" );
-#			wfDebugLog( __METHOD__, json_encode( $pvjson ) );
-#			wfDebugLog( __METHOD__, "\n" );
-#			return;
-#		}
-#
-#		$reactOpt = ( isset( $opts["react"] ) && $opts["react"] == true )
-#				  ? " --react"
-#				  : "";
-#		$themeOpt = ( isset( $opts["theme"] ) && self::$svgThemes[$opts["theme"]] )
-#				  ? "--theme " . escapeshellarg( self::$svgThemes[$opts["theme"]] )
-#				  : "";
-#
-#		try{
-#			$streamPvjsonToSvg = ConvertStream::createStream(
-#				"pvjs $reactOpt $themeOpt", [ "timeout" => 10 ]
-#			);
-#			return $streamPvjsonToSvg( $pvjson, true );
-#		} catch ( Exception $e ) {
-#			wfDebugLog( __METHOD__, "Error converting PVJSON to SVG:" );
-#			wfDebugLog( __METHOD__, $e );
-#			wfDebugLog( __METHOD__, "\n" );
-#			return;
-#		}
-#	}
-
 }
