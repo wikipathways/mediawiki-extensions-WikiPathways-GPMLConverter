@@ -2,3 +2,4 @@ pvjs.js
 envvars
 vendor
 composer.lock
+uninstall-nix.sh
