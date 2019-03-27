@@ -73,7 +73,7 @@ class Converter {
 	 * @param array $opts=[] options
 	 * @return bool
 	 */
-	public function convert( $gpmlFile, $outFile, $opts = [] ) {
+	public static function convert( $gpmlFile, $outFile, $opts = [] ) {
 		if ( !$gpmlFile ) {
 			wfDebugLog( __METHOD__, "Error: invalid gpml provided" );
 			return false;
