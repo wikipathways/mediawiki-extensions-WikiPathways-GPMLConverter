@@ -36,6 +36,17 @@ Responses to give to prompts:
 * Can we use sudo?: `y`
 * Ready to continue?: `y`
 
+## JS Fix:
+Needed to change this in modules/pvjs.vanilla.js:
+```
+window.XrefPanel.show(this.detailsPanelRef,r.xrefIdentifier,r.xrefDataSource,t.organism,{0:r.textContent})
+```
+
+to this:
+```
+window.XrefPanel.show(this.detailsPanelRef,r.xrefIdentifier,r.xrefDataSource,t.organism,r.textContent)
+```
+
 ## How to Use
 Try converting some data using one of the following options.
 
@@ -60,10 +71,14 @@ An SVG file for Revision #77712 of Pathway WP554 (ACE Inhibitor Pathway) stored 
 
 ## Troubleshooting
 
-To remove cache:
+To remove cache on old MW server:
 ```
-find /var/www/wikipathways/images/ -wholename "*images/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.json" -delete
-find /var/www/wikipathways/images/ -wholename "*images/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.svg" -delete
+find /var/www/wikipathways/images/ -wholename "*images/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.*" -delete
+```
+
+To remove cache on updated MW server:
+```
+find /home/wikipathways.org/images/ -wholename "*images/wikipathways/[a-z0-9]/[a-z0-9][a-z0-9]/WP*_*.*" -delete
 ```
 
 #### Not enough space
